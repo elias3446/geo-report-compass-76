@@ -4,7 +4,7 @@ import MapView from "@/components/map/MapView";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Download } from "lucide-react";
+import { Download, FilterX } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { TimeFilterProvider } from "@/context/TimeFilterContext";
@@ -15,7 +15,7 @@ const MapPage = () => {
   
   // Handle export button click
   const handleExport = () => {
-    // Create a simple event that will trigger the export function in the MapView component
+    // Create a custom event that will trigger the export function in the MapView component
     const exportEvent = new CustomEvent("export-map-data");
     document.dispatchEvent(exportEvent);
     
@@ -72,7 +72,7 @@ const MapPage = () => {
         <Card className="shadow-md">
           <CardContent className="p-0">
             <TimeFilterProvider>
-              <MapView height="70vh" filterStatus={activeFilter} />
+              <MapView height="70vh" filterStatus={activeFilter} isStandalone={true} />
             </TimeFilterProvider>
           </CardContent>
         </Card>

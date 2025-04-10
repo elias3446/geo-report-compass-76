@@ -36,7 +36,8 @@ import {
   Users,
   CalendarIcon,
   Edit,
-  Eye
+  Eye,
+  FilterX
 } from "lucide-react";
 import MapView from "@/components/map/MapView";
 import { useEffect, useState, useMemo, useRef } from "react";
@@ -134,9 +135,6 @@ const DashboardContent = () => {
       setSelectedCategory(null);
       setActiveIndex(undefined);
     } else if (activeReportTab === "categories") {
-      setSelectedCategory(null);
-      setActiveIndex(undefined);
-      
       setShowOpenReports(true);
       setShowClosedReports(true);
       setShowInProgressReports(true);
@@ -220,14 +218,9 @@ const DashboardContent = () => {
   };
 
   const onPieClick = (_: any, index: number) => {
-    if (activeIndex === index && selectedCategory) {
-      setSelectedCategory(null);
-      setActiveIndex(undefined);
-    } else {
-      setActiveIndex(index);
-      if (reportsByCategory[index]) {
-        setSelectedCategory(reportsByCategory[index].name);
-      }
+    setActiveIndex(index);
+    if (reportsByCategory[index]) {
+      setSelectedCategory(reportsByCategory[index].name);
     }
   };
 
@@ -764,8 +757,24 @@ const DashboardContent = () => {
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
-                <div className="mt-4 text-center text-sm text-muted-foreground">
-                  Click on a category to filter the map view, or click outside the chart to clear the filter
+                <div className="mt-4 text-center text-sm">
+                  <p className="text-muted-foreground mb-2">
+                    Click on a category to filter the map view
+                  </p>
+                  {selectedCategory && (
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => {
+                        setSelectedCategory(null);
+                        setActiveIndex(undefined);
+                      }}
+                      className="flex items-center"
+                    >
+                      <FilterX className="h-4 w-4 mr-2" />
+                      Clear category filter
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -782,8 +791,19 @@ const DashboardContent = () => {
                 </CardDescription>
               </div>
               {selectedCategory && activeReportTab === "categories" && (
-                <Badge variant="outline" className="bg-blue-50 text-blue-700">
-                  Showing: {selectedCategory}
+                <Badge variant="outline" className="bg-blue-50 text-blue-700 flex items-center gap-1">
+                  <span>Showing: {selectedCategory}</span>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-4 w-4 p-0 hover:bg-transparent"
+                    onClick={() => {
+                      setSelectedCategory(null);
+                      setActiveIndex(undefined);
+                    }}
+                  >
+                    <FilterX className="h-3 w-3" />
+                  </Button>
                 </Badge>
               )}
             </div>

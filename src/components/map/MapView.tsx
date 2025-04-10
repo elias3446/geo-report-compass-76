@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useMemo } from "react";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
@@ -60,11 +59,19 @@ interface MapViewProps {
   height?: string;
   filterStatus?: string;
   categoryOnly?: boolean;
+  isStandalone?: boolean;
 }
 
-const MapView = ({ height = "500px", filterStatus, categoryOnly = false }: MapViewProps) => {
+const MapView = ({
+  height = "500px",
+  filterStatus,
+  categoryOnly = false,
+  isStandalone = false
+}: MapViewProps) => {
   const [reports, setReports] = useState<any[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
+
+  // Only use TimeFilterContext if this is not a standalone map (i.e., it's part of dashboard)
   const {
     timeFrame,
     selectedYear,
@@ -93,7 +100,21 @@ const MapView = ({ height = "500px", filterStatus, categoryOnly = false }: MapVi
   const filteredReports = useMemo(() => {
     let filtered = reports;
     
-    // First apply time period filters if not in categoryOnly mode
+    // If this is a standalone map (from the Map page), only apply the filterStatus
+    if (isStandalone) {
+      if (filterStatus) {
+        if (filterStatus === "open") {
+          filtered = filtered.filter(report => report.status === "Open");
+        } else if (filterStatus === "progress") {
+          filtered = filtered.filter(report => report.status === "In Progress");
+        } else if (filterStatus === "resolved") {
+          filtered = filtered.filter(report => report.status === "Resolved");
+        }
+      }
+      return filtered;
+    }
+    
+    // Otherwise apply all filters from TimeFilterContext (for dashboard view)
     if (!categoryOnly) {
       if (selectedYear !== undefined) {
         filtered = filtered.filter(report => {
@@ -166,7 +187,8 @@ const MapView = ({ height = "500px", filterStatus, categoryOnly = false }: MapVi
     selectedMonth, 
     selectedDay,
     selectedCategory,
-    categoryOnly
+    categoryOnly,
+    isStandalone
   ]);
 
   // Get coordinates for each report
@@ -174,26 +196,107 @@ const MapView = ({ height = "500px", filterStatus, categoryOnly = false }: MapVi
     return sampleLocations[location] || defaultCenter;
   };
 
+  // Export reports to CSV
+  const exportToCSV = () => {
+    if (filteredReports.length === 0) {
+      console.log("No reports to export");
+      return;
+    }
+    
+    // Define CSV headers based on report properties
+    const headers = [
+      "ID", 
+      "Title", 
+      "Description", 
+      "Status", 
+      "Priority", 
+      "Category", 
+      "Location", 
+      "Created At", 
+      "Latitude", 
+      "Longitude"
+    ].join(",");
+    
+    // Convert each report to CSV row
+    const csvRows = filteredReports.map(report => {
+      const coordinates = getCoordinates(report.location);
+      return [
+        report.id,
+        `"${report.title.replace(/"/g, '""')}"`,
+        `"${report.description.replace(/"/g, '""')}"`,
+        report.status,
+        report.priority,
+        report.category,
+        `"${report.location.replace(/"/g, '""')}"`,
+        new Date(report.createdAt).toISOString(),
+        coordinates[0],
+        coordinates[1]
+      ].join(",");
+    });
+    
+    // Combine headers and rows
+    const csvContent = [headers, ...csvRows].join("\n");
+    
+    // Create download link
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    
+    // Set file name based on current filter
+    let fileName = "all_reports.csv";
+    if (isStandalone && filterStatus) {
+      fileName = `${filterStatus}_reports.csv`;
+    } else if (selectedCategory) {
+      fileName = `${selectedCategory.toLowerCase()}_reports.csv`;
+    }
+    
+    // Configure link for download
+    link.setAttribute("href", url);
+    link.setAttribute("download", fileName);
+    link.style.visibility = "hidden";
+    
+    // Add to document, click to download, then remove
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Add event listener for export button click
+  useEffect(() => {
+    const handleExportEvent = () => {
+      exportToCSV();
+    };
+    
+    document.addEventListener("export-map-data", handleExportEvent);
+    
+    return () => {
+      document.removeEventListener("export-map-data", handleExportEvent);
+    };
+  }, [filteredReports]);
+
   // Log the filtered reports for debugging
   useEffect(() => {
-    console.log(`Map showing ${filteredReports.length} reports for ${timeFrame} view with year=${selectedYear}, month=${selectedMonth}, day=${selectedDay}`);
-    console.log('Status filters:', { showOpenReports, showInProgressReports, showClosedReports });
-    if (selectedCategory) {
-      console.log(`Category filter applied: ${selectedCategory}`);
+    if (isStandalone) {
+      console.log(`Standalone map showing ${filteredReports.length} reports with filter: ${filterStatus || 'all'}`);
+    } else {
+      console.log(`Dashboard map showing ${filteredReports.length} reports for ${timeFrame} view with year=${selectedYear}, month=${selectedMonth}, day=${selectedDay}`);
+      console.log('Status filters:', { showOpenReports, showInProgressReports, showClosedReports });
+      if (selectedCategory) {
+        console.log(`Category filter applied: ${selectedCategory}`);
+      }
     }
-  }, [filteredReports, timeFrame, selectedYear, selectedMonth, selectedDay, showOpenReports, showInProgressReports, showClosedReports, selectedCategory]);
+  }, [filteredReports, timeFrame, selectedYear, selectedMonth, selectedDay, showOpenReports, showInProgressReports, showClosedReports, selectedCategory, isStandalone, filterStatus]);
 
   return (
     <div style={{ height, width: "100%" }}>
       <MapContainer 
+        style={{ height: "100%", width: "100%" }}
         center={defaultCenter}
         zoom={13}
-        scrollWheelZoom={false}
-        style={{ height: "100%", width: "100%" }}
       >
         <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         />
         
         {filteredReports.map((report, index) => (
