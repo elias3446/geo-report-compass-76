@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { 
@@ -359,7 +360,7 @@ const ReportList = () => {
             
             <Select 
               onValueChange={(value) => handleSort(value as keyof Report)}
-              value={sortConfig?.key as string}
+              value={sortConfig?.key as string || ""}
             >
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Sort by..." />
