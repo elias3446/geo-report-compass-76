@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useMemo } from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { getReports } from "@/services/reportService";
@@ -56,28 +56,13 @@ const sampleLocations: Record<string, [number, number]> = {
 // Default location (Mexico City)
 const defaultCenter: [number, number] = [19.4326, -99.1332];
 
-// Map Center component to fix the center property issue
-function SetMapCenter({ center }: { center: [number, number] }) {
-  const map = useMap();
-  useEffect(() => {
-    map.setView(center, map.getZoom());
-  }, [center, map]);
-  return null;
-}
-
 interface MapViewProps {
   height?: string;
   filterStatus?: string;
   categoryOnly?: boolean;
-  ignoreFilters?: boolean;
 }
 
-const MapView = ({ 
-  height = "500px", 
-  filterStatus, 
-  categoryOnly = false,
-  ignoreFilters = false 
-}: MapViewProps) => {
+const MapView = ({ height = "500px", filterStatus, categoryOnly = false }: MapViewProps) => {
   const [reports, setReports] = useState<any[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
   const {
@@ -106,11 +91,6 @@ const MapView = ({
 
   // Filter reports based on status filters and time period
   const filteredReports = useMemo(() => {
-    // If ignoreFilters is true, return all reports without any filtering
-    if (ignoreFilters) {
-      return reports;
-    }
-    
     let filtered = reports;
     
     // First apply time period filters if not in categoryOnly mode
@@ -186,8 +166,7 @@ const MapView = ({
     selectedMonth, 
     selectedDay,
     selectedCategory,
-    categoryOnly,
-    ignoreFilters
+    categoryOnly
   ]);
 
   // Get coordinates for each report
@@ -202,59 +181,39 @@ const MapView = ({
     if (selectedCategory) {
       console.log(`Category filter applied: ${selectedCategory}`);
     }
-    if (ignoreFilters) {
-      console.log('All filters ignored - showing unfiltered map');
-    }
-  }, [filteredReports, timeFrame, selectedYear, selectedMonth, selectedDay, showOpenReports, showInProgressReports, showClosedReports, selectedCategory, ignoreFilters]);
-
-  // Handle CSV export
-  useEffect(() => {
-    const handleExportData = () => {
-      console.log("Export data requested");
-      // CSV export logic would go here
-    };
-    
-    document.addEventListener("export-map-data", handleExportData);
-    
-    return () => {
-      document.removeEventListener("export-map-data", handleExportData);
-    };
-  }, [filteredReports]);
+  }, [filteredReports, timeFrame, selectedYear, selectedMonth, selectedDay, showOpenReports, showInProgressReports, showClosedReports, selectedCategory]);
 
   return (
     <div style={{ height, width: "100%" }}>
       <MapContainer 
-        style={{ height: "100%", width: "100%" }}
+        center={defaultCenter}
         zoom={13}
         scrollWheelZoom={false}
+        style={{ height: "100%", width: "100%" }}
       >
-        <SetMapCenter center={defaultCenter} />
         <TileLayer
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         
-        {filteredReports.map((report, index) => {
-          const position = getCoordinates(report.location);
-          return (
-            <Marker 
-              key={index}
-              position={position}
-              icon={getReportIcon(report.status)}
-            >
-              <Popup>
-                <div className="p-1">
-                  <h3 className="font-semibold">{report.title}</h3>
-                  <p className="text-sm mt-1">Status: {report.status}</p>
-                  <p className="text-sm">Location: {report.location}</p>
-                  <p className="text-sm">Category: {report.category}</p>
-                  <p className="text-sm">Priority: {report.priority}</p>
-                  <p className="text-sm">Date: {new Date(report.createdAt).toLocaleDateString()}</p>
-                </div>
-              </Popup>
-            </Marker>
-          );
-        })}
+        {filteredReports.map((report, index) => (
+          <Marker 
+            key={index}
+            position={getCoordinates(report.location)}
+            icon={getReportIcon(report.status)}
+          >
+            <Popup>
+              <div className="p-1">
+                <h3 className="font-semibold">{report.title}</h3>
+                <p className="text-sm mt-1">Status: {report.status}</p>
+                <p className="text-sm">Location: {report.location}</p>
+                <p className="text-sm">Category: {report.category}</p>
+                <p className="text-sm">Priority: {report.priority}</p>
+                <p className="text-sm">Date: {new Date(report.createdAt).toLocaleDateString()}</p>
+              </div>
+            </Popup>
+          </Marker>
+        ))}
       </MapContainer>
     </div>
   );
