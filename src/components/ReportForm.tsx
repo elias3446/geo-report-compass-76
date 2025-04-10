@@ -47,7 +47,7 @@ const initialFormData: FormData = {
     lng: 0,
     name: '',
   },
-  date: format(new Date(), 'yyyy-MM-dd'),
+  date: format(new Date(), 'yyyy-MM-dd\'T\'HH:mm:ss\'Z\''), // Updated to include time
   status: 'draft',
   category: '',
   tags: [],
@@ -120,10 +120,16 @@ const ReportForm: React.FC = () => {
 
   const handleDateChange = (selectedDate: Date | undefined) => {
     if (selectedDate) {
+      // Preserve the current time when changing date
+      const currentDate = date || new Date();
+      selectedDate.setHours(currentDate.getHours());
+      selectedDate.setMinutes(currentDate.getMinutes());
+      selectedDate.setSeconds(currentDate.getSeconds());
+      
       setDate(selectedDate);
       setFormData(prev => ({
         ...prev,
-        date: format(selectedDate, 'yyyy-MM-dd'),
+        date: selectedDate.toISOString(),
       }));
     }
   };
@@ -176,14 +182,20 @@ const ReportForm: React.FC = () => {
       return;
     }
 
+    // Ensure the current date and time are included
+    const reportData = {
+      ...formData,
+      date: new Date().toISOString(), // Set to current date and time
+    };
+
     if (isEditMode) {
-      updateReport(id, formData);
+      updateReport(id, reportData);
       toast({
         title: "Success",
         description: "Report updated successfully",
       });
     } else {
-      addReport(formData);
+      addReport(reportData);
       toast({
         title: "Success",
         description: "New report created successfully",
@@ -191,6 +203,16 @@ const ReportForm: React.FC = () => {
     }
     
     navigate('/reports');
+  };
+
+  // Format date for display
+  const formatDisplayDate = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      return format(date, 'PPP p'); // Format with date and time
+    } catch (e) {
+      return format(new Date(), 'PPP p');
+    }
   };
 
   return (
@@ -294,7 +316,7 @@ const ReportForm: React.FC = () => {
                   )}
                 >
                   <CalendarIcon className="mr-2 h-4 w-4" />
-                  {date ? format(date, "PPP") : <span>Pick a date</span>}
+                  {date ? formatDisplayDate(date.toISOString()) : <span>Current date and time will be used</span>}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0">
@@ -304,6 +326,11 @@ const ReportForm: React.FC = () => {
                   onSelect={handleDateChange}
                   initialFocus
                 />
+                <div className="p-3 border-t border-border">
+                  <p className="text-xs text-muted-foreground">
+                    The current date and time will be captured automatically when the report is submitted.
+                  </p>
+                </div>
               </PopoverContent>
             </Popover>
           </div>

@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { formatDistance } from 'date-fns';
+import { formatDistance, format } from 'date-fns';
 import { GeoReport } from '@/contexts/ReportContext';
 import { 
   MapPin, 
@@ -71,6 +71,16 @@ const ReportCard: React.FC<ReportCardProps> = ({ report, onDelete }) => {
     }
   };
   
+  // Format date with time information
+  const formatDisplayDate = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      return format(date, 'PPP p'); // Format with date and time
+    } catch (e) {
+      return "Invalid date";
+    }
+  };
+  
   return (
     <Card className="h-full hover:shadow-md transition-shadow">
       <CardHeader className="pb-2">
@@ -120,6 +130,12 @@ const ReportCard: React.FC<ReportCardProps> = ({ report, onDelete }) => {
           <CalendarDays className="h-3 w-3" />
           <span>
             {formatDistance(new Date(report.date), new Date(), { addSuffix: true })}
+          </span>
+        </div>
+        <div className="flex items-center gap-1 text-xs text-muted-foreground mb-2">
+          <Clock className="h-3 w-3" />
+          <span>
+            {formatDisplayDate(report.date)}
           </span>
         </div>
         <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">

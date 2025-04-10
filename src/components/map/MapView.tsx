@@ -1,9 +1,11 @@
+
 import { useState, useEffect, useMemo } from "react";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { getReports } from "@/services/reportService";
 import { useTimeFilter } from "@/context/TimeFilterContext";
+import { toast } from "sonner";
 
 // Create custom marker icons for different report status
 const getReportIcon = (status: string) => {
@@ -199,36 +201,41 @@ const MapView = ({
   // Export reports to CSV
   const exportToCSV = () => {
     if (filteredReports.length === 0) {
-      console.log("No reports to export");
+      toast.error("No hay reportes para exportar");
       return;
     }
     
     // Define CSV headers based on report properties
     const headers = [
       "ID", 
-      "Title", 
-      "Description", 
-      "Status", 
-      "Priority", 
-      "Category", 
-      "Location", 
-      "Created At", 
-      "Latitude", 
-      "Longitude"
+      "Título", 
+      "Descripción", 
+      "Estado", 
+      "Prioridad", 
+      "Categoría", 
+      "Ubicación", 
+      "Fecha de Creación", 
+      "Latitud", 
+      "Longitud"
     ].join(",");
     
     // Convert each report to CSV row
     const csvRows = filteredReports.map(report => {
       const coordinates = getCoordinates(report.location);
+      // Check if properties exist before accessing them to avoid undefined errors
+      const safeTitle = report.title ? report.title.replace(/"/g, '""') : "";
+      const safeDescription = report.description ? report.description.replace(/"/g, '""') : "";
+      const safeLocation = report.location ? report.location.replace(/"/g, '""') : "";
+      
       return [
-        report.id,
-        `"${report.title.replace(/"/g, '""')}"`,
-        `"${report.description.replace(/"/g, '""')}"`,
-        report.status,
-        report.priority,
-        report.category,
-        `"${report.location.replace(/"/g, '""')}"`,
-        new Date(report.createdAt).toISOString(),
+        report.id || "",
+        `"${safeTitle}"`,
+        `"${safeDescription}"`,
+        report.status || "",
+        report.priority || "",
+        report.category || "",
+        `"${safeLocation}"`,
+        report.createdAt ? new Date(report.createdAt).toISOString() : "",
         coordinates[0],
         coordinates[1]
       ].join(",");
@@ -243,27 +250,33 @@ const MapView = ({
     const link = document.createElement("a");
     
     // Set file name based on current filter
-    let fileName = "all_reports.csv";
+    let fileName = "todos_los_reportes.csv";
     if (isStandalone && filterStatus) {
-      fileName = `${filterStatus}_reports.csv`;
+      if (filterStatus === "open") fileName = "reportes_abiertos.csv";
+      else if (filterStatus === "progress") fileName = "reportes_en_progreso.csv";
+      else if (filterStatus === "resolved") fileName = "reportes_resueltos.csv";
+      else fileName = "todos_los_reportes.csv";
     } else if (selectedCategory) {
-      fileName = `${selectedCategory.toLowerCase()}_reports.csv`;
+      fileName = `reportes_${selectedCategory.toLowerCase().replace(/\s+/g, '_')}.csv`;
     }
     
     // Configure link for download
     link.setAttribute("href", url);
     link.setAttribute("download", fileName);
-    link.style.visibility = "hidden";
     
     // Add to document, click to download, then remove
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    
+    // Notify user
+    toast.success(`Exportación completada: ${fileName}`);
   };
 
   // Add event listener for export button click
   useEffect(() => {
     const handleExportEvent = () => {
+      console.log("Export event triggered, exporting reports:", filteredReports.length);
       exportToCSV();
     };
     
@@ -308,11 +321,11 @@ const MapView = ({
             <Popup>
               <div className="p-1">
                 <h3 className="font-semibold">{report.title}</h3>
-                <p className="text-sm mt-1">Status: {report.status}</p>
-                <p className="text-sm">Location: {report.location}</p>
-                <p className="text-sm">Category: {report.category}</p>
-                <p className="text-sm">Priority: {report.priority}</p>
-                <p className="text-sm">Date: {new Date(report.createdAt).toLocaleDateString()}</p>
+                <p className="text-sm mt-1">Estado: {report.status}</p>
+                <p className="text-sm">Ubicación: {report.location}</p>
+                <p className="text-sm">Categoría: {report.category}</p>
+                <p className="text-sm">Prioridad: {report.priority}</p>
+                <p className="text-sm">Fecha: {new Date(report.createdAt).toLocaleDateString()}</p>
               </div>
             </Popup>
           </Marker>

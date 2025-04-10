@@ -13,13 +13,15 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, MapPin, Clock, User, Edit, AlertCircle } from "lucide-react";
-import { getReports, updateReport, Report } from "@/services/reportService";
+import { getReports, updateReport, Report, getActivitiesByReportId, Activity } from "@/services/reportService";
 import { toast } from "sonner";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const ReportDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [report, setReport] = useState<Report | null>(null);
+  const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -27,6 +29,12 @@ const ReportDetail = () => {
       const reports = getReports();
       const foundReport = reports.find(r => r.id === parseInt(id));
       setReport(foundReport || null);
+      
+      if (foundReport) {
+        const reportActivities = getActivitiesByReportId(foundReport.id);
+        setActivities(reportActivities);
+      }
+      
       setLoading(false);
     }
   }, [id]);
@@ -37,6 +45,10 @@ const ReportDetail = () => {
     const updatedReport = updateReport(report.id, { status: newStatus });
     if (updatedReport) {
       setReport(updatedReport);
+      
+      const updatedActivities = getActivitiesByReportId(report.id);
+      setActivities(updatedActivities);
+      
       toast.success(`Report status updated to ${newStatus}`);
     }
   };
@@ -76,6 +88,27 @@ const ReportDetail = () => {
       hour: 'numeric',
       minute: 'numeric',
     }).format(date);
+  };
+
+  const getActivityColor = (type: string) => {
+    switch (type) {
+      case "report_created":
+        return "border-green-500";
+      case "report_updated":
+        return "border-blue-500";
+      case "report_resolved":
+        return "border-purple-500";
+      case "report_assigned":
+        return "border-orange-500";
+      case "priority_changed":
+        return "border-red-500";
+      case "category_changed":
+        return "border-yellow-500";
+      case "location_changed":
+        return "border-teal-500";
+      default:
+        return "border-gray-500";
+    }
   };
 
   if (loading) {
@@ -122,19 +155,19 @@ const ReportDetail = () => {
           Back to Reports
         </Button>
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center">
-          <h1 className="text-3xl font-bold tracking-tight">{report.title}</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{report?.title}</h1>
           <div className="mt-2 sm:mt-0 flex space-x-2">
             <Badge 
               variant="outline" 
-              className={getStatusColor(report.status)}
+              className={getStatusColor(report?.status || "")}
             >
-              {report.status}
+              {report?.status}
             </Badge>
             <Badge 
               variant="outline" 
-              className={getPriorityColor(report.priority)}
+              className={getPriorityColor(report?.priority || "")}
             >
-              {report.priority} Priority
+              {report?.priority} Priority
             </Badge>
           </div>
         </div>
@@ -238,14 +271,24 @@ const ReportDetail = () => {
               <CardTitle>Report Activity</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                <div className="border-l-2 border-green-500 pl-4 py-1">
-                  <p className="text-sm font-medium">Report Created</p>
-                  <p className="text-xs text-muted-foreground">{formatDate(report.createdAt)}</p>
+              <ScrollArea className="h-[400px] pr-4">
+                <div className="space-y-3">
+                  {activities.length > 0 ? (
+                    activities.map((activity) => (
+                      <div 
+                        key={activity.id} 
+                        className={`border-l-2 pl-4 py-1 ${getActivityColor(activity.type)}`}
+                      >
+                        <p className="text-sm font-medium">{activity.title}</p>
+                        <p className="text-xs text-muted-foreground">{activity.description}</p>
+                        <p className="text-xs text-muted-foreground mt-1">{formatDate(activity.createdAt)}</p>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No activity recorded for this report.</p>
+                  )}
                 </div>
-                
-                {/* We would show other activity items here */}
-              </div>
+              </ScrollArea>
             </CardContent>
           </Card>
         </div>

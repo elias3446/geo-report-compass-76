@@ -10,15 +10,16 @@ export interface GeoReport {
     lng: number;
     name: string;
   };
-  date: string;
+  date: string; // This will now store a full ISO timestamp
   status: 'draft' | 'submitted' | 'approved' | 'rejected';
   category: string;
   tags: string[];
+  createdAt: string; // Adding explicit createdAt timestamp
 }
 
 interface ReportContextType {
   reports: GeoReport[];
-  addReport: (report: Omit<GeoReport, 'id'>) => void;
+  addReport: (report: Omit<GeoReport, 'id' | 'createdAt'>) => void;
   updateReport: (id: string, report: Partial<GeoReport>) => void;
   deleteReport: (id: string) => void;
   getReportById: (id: string) => GeoReport | undefined;
@@ -37,7 +38,8 @@ const initialReports: GeoReport[] = [
       lng: -122.3321,
       name: 'Seattle, WA'
     },
-    date: '2025-03-15',
+    date: '2025-03-15T10:30:00Z', // Updated to include time
+    createdAt: '2025-03-15T10:30:00Z', // Added timestamp
     status: 'approved',
     category: 'Environmental',
     tags: ['coastal', 'erosion', 'annual']
@@ -51,7 +53,8 @@ const initialReports: GeoReport[] = [
       lng: -122.4194,
       name: 'San Francisco, CA'
     },
-    date: '2025-02-28',
+    date: '2025-02-28T15:45:00Z', // Updated to include time
+    createdAt: '2025-02-28T15:45:00Z', // Added timestamp
     status: 'submitted',
     category: 'Urban Planning',
     tags: ['urban', 'development', 'watershed']
@@ -65,7 +68,8 @@ const initialReports: GeoReport[] = [
       lng: -105.7821,
       name: 'Colorado Mountains'
     },
-    date: '2025-04-01',
+    date: '2025-04-01T08:20:00Z', // Updated to include time
+    createdAt: '2025-04-01T08:20:00Z', // Added timestamp
     status: 'draft',
     category: 'Disaster Management',
     tags: ['forest', 'fire', 'risk', 'climate']
@@ -79,7 +83,8 @@ const initialReports: GeoReport[] = [
       lng: -93.0977,
       name: 'Central Iowa'
     },
-    date: '2025-01-15',
+    date: '2025-01-15T12:15:00Z', // Updated to include time
+    createdAt: '2025-01-15T12:15:00Z', // Added timestamp
     status: 'approved',
     category: 'Agriculture',
     tags: ['soil', 'agriculture', 'contamination']
@@ -89,10 +94,12 @@ const initialReports: GeoReport[] = [
 export const ReportProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [reports, setReports] = useState<GeoReport[]>(initialReports);
 
-  const addReport = (reportData: Omit<GeoReport, 'id'>) => {
+  const addReport = (reportData: Omit<GeoReport, 'id' | 'createdAt'>) => {
+    const now = new Date().toISOString();
     const newReport: GeoReport = {
       ...reportData,
       id: Date.now().toString(),
+      createdAt: now, // Add current timestamp
     };
     
     setReports(prev => [...prev, newReport]);
