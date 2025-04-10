@@ -1,3 +1,4 @@
+
 import * as React from "react"
 
 import type {
@@ -139,22 +140,32 @@ function dispatch(action: Action) {
 
 type Toast = Omit<ToasterToast, "id">
 
-function toast({ ...props }: Toast) {
+// Modified toast function to handle both string and object formats
+function toast(message: string | { title?: string, description?: string, [key: string]: any }) {
   const id = genId()
+  
+  // Process the message to ensure it's in the right format
+  let toastProps: ToasterToast = { id, open: true };
+  
+  if (typeof message === 'string') {
+    toastProps.title = message;
+  } else {
+    // If it's an object, extract title and description
+    toastProps = { ...toastProps, ...message };
+  }
 
   const update = (props: ToasterToast) =>
     dispatch({
       type: "UPDATE_TOAST",
       toast: { ...props, id },
     })
+    
   const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: id })
 
   dispatch({
     type: "ADD_TOAST",
     toast: {
-      ...props,
-      id,
-      open: true,
+      ...toastProps,
       onOpenChange: (open) => {
         if (!open) dismiss()
       },
