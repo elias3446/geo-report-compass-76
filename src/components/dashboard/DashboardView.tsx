@@ -792,6 +792,7 @@ const DashboardContent = () => {
             <MapView 
               height="330px" 
               categoryOnly={activeReportTab === "categories"}
+              ignoreFilters={false}
             />
           </CardContent>
         </Card>
