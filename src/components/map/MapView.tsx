@@ -44,13 +44,10 @@ const MapView = ({ height = "500px", categoryOnly = false, ignoreFilters = false
       let sumLat = 0;
       let sumLng = 0;
       allReports.forEach(report => {
-        // Check if latitude and longitude exist on the report
-        if (report.lat !== undefined && report.lng !== undefined) {
-          sumLat += report.lat;
-          sumLng += report.lng;
-        } else if (report.latitude !== undefined && report.longitude !== undefined) {
-          sumLat += report.latitude;
-          sumLng += report.longitude;
+        // Check if location exists and has lat/lng properties
+        if (report.location && report.location.lat !== undefined && report.location.lng !== undefined) {
+          sumLat += report.location.lat;
+          sumLng += report.location.lng;
         }
       });
       const avgLat = sumLat / allReports.length;
@@ -96,8 +93,13 @@ const MapView = ({ height = "500px", categoryOnly = false, ignoreFilters = false
         };
     
         filteredReports.forEach(report => {
-          const latitude = report.lat || report.latitude;
-          const longitude = report.lng || report.longitude;
+          if (!report.location) {
+            console.warn('Report missing location:', report);
+            return;
+          }
+          
+          const latitude = report.location.lat;
+          const longitude = report.location.lng;
           
           if (latitude === undefined || longitude === undefined) {
             console.warn('Report missing coordinates:', report);
@@ -144,7 +146,7 @@ const MapView = ({ height = "500px", categoryOnly = false, ignoreFilters = false
   return (
     <div className="relative" style={{ height: height || "500px" }}>
       <MapContainer 
-        center={mapCenter as [number, number]} 
+        center={mapCenter} 
         zoom={zoomLevel} 
         style={{ height: height || "500px", width: "100%" }}
         ref={mapRef}
@@ -154,17 +156,14 @@ const MapView = ({ height = "500px", categoryOnly = false, ignoreFilters = false
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         />
         {filteredReports.map(report => {
-          const latitude = report.lat || report.latitude;
-          const longitude = report.lng || report.longitude;
-          
-          if (latitude === undefined || longitude === undefined) {
+          if (!report.location || report.location.lat === undefined || report.location.lng === undefined) {
             return null;
           }
           
           return (
             <Marker 
               key={report.id} 
-              position={[latitude, longitude]}
+              position={[report.location.lat, report.location.lng]}
             >
               <Popup>
                 <h2>{report.title}</h2>
