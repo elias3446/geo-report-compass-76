@@ -1,4 +1,3 @@
-
 import { 
   Card, 
   CardContent, 
@@ -146,25 +145,22 @@ const DashboardContent = () => {
     }
   };
 
-  // Nuevo renderizado para el donut chart
   const renderActiveShape = (props: any) => {
     const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill, payload, percent, value } = props;
     
     return (
       <g>
-        {/* Sector activo aumentado de tamaño para resaltar */}
         <Sector
           cx={cx}
           cy={cy}
           innerRadius={innerRadius}
-          outerRadius={outerRadius + 10} // Aumentamos el radio exterior para resaltar
+          outerRadius={outerRadius + 10}
           startAngle={startAngle}
           endAngle={endAngle}
           fill={fill}
           className="filter drop-shadow-lg"
         />
         
-        {/* Efecto de brillo alrededor del sector seleccionado */}
         <Sector
           cx={cx}
           cy={cy}
@@ -181,35 +177,67 @@ const DashboardContent = () => {
     );
   };
 
-  // Texto central del donut chart que muestra la categoría seleccionada
   const renderCenterLabel = () => {
-    if (activeIndex === undefined || !reportsByCategory[activeIndex]) {
+    if (selectedCategories.length === 0) {
       return (
         <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" className="text-base font-medium">
           <tspan x="50%" dy="-10">Categorías</tspan>
-          <tspan x="50%" dy="25" className="text-sm text-muted-foreground">Seleccione una</tspan>
+          <tspan x="50%" dy="25" className="text-sm text-muted-foreground">Seleccione una o más</tspan>
         </text>
       );
     }
 
-    const category = reportsByCategory[activeIndex];
-    const categoryColor = COLORS[activeIndex % COLORS.length];
+    if (selectedCategories.length === 1 && reportsByCategory.length > 0) {
+      const categoryData = reportsByCategory.find(cat => cat.name === selectedCategories[0]);
+      if (categoryData) {
+        const categoryColor = COLORS[reportsByCategory.findIndex(c => c.name === selectedCategories[0]) % COLORS.length];
+        const totalReports = reportsByCategory.reduce((sum, cat) => sum + cat.value, 0);
+        const percentage = ((categoryData.value / totalReports) * 100).toFixed(1);
+        
+        return (
+          <>
+            <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" className="text-base font-medium" fill={categoryColor}>
+              <tspan x="50%" dy="-10">{categoryData.name}</tspan>
+              <tspan x="50%" dy="25" className="text-sm">{categoryData.value} reportes</tspan>
+              <tspan x="50%" dy="20" className="text-xs text-muted-foreground">({percentage}%)</tspan>
+            </text>
+          </>
+        );
+      }
+    }
+    
+    const selectedCategoriesData = reportsByCategory.filter(cat => 
+      selectedCategories.includes(cat.name)
+    );
+    
+    const totalSelectedReports = selectedCategoriesData.reduce(
+      (sum, cat) => sum + cat.value, 0
+    );
+    
+    const totalAllReports = reportsByCategory.reduce(
+      (sum, cat) => sum + cat.value, 0
+    );
+    
+    const percentage = ((totalSelectedReports / totalAllReports) * 100).toFixed(1);
     
     return (
       <>
-        <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" className="text-base font-medium" fill={categoryColor}>
-          <tspan x="50%" dy="-10">{category.name}</tspan>
-          <tspan x="50%" dy="25" className="text-sm">{category.value} reportes</tspan>
-          <tspan x="50%" dy="20" className="text-xs text-muted-foreground">({(category.value / reportsByCategory.reduce((sum, cat) => sum + cat.value, 0) * 100).toFixed(1)}%)</tspan>
+        <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" className="text-base font-medium">
+          <tspan x="50%" dy="-15" className="font-bold text-blue-600">{selectedCategories.length} categorías</tspan>
+          <tspan x="50%" dy="25" className="text-sm">{totalSelectedReports} reportes</tspan>
+          <tspan x="50%" dy="20" className="text-xs text-muted-foreground">({percentage}%)</tspan>
         </text>
       </>
     );
   };
 
   const onPieEnter = (_: any, index: number) => {
-    setActiveIndex(index);
     if (reportsByCategory[index]) {
-      setSelectedCategory(reportsByCategory[index].name);
+      const category = reportsByCategory[index].name;
+      if (!selectedCategories.includes(category)) {
+        setSelectedCategories([...selectedCategories, category]);
+      }
+      setActiveIndex(index);
     }
   };
 
@@ -219,9 +247,15 @@ const DashboardContent = () => {
   };
 
   const onPieClick = (_: any, index: number) => {
-    setActiveIndex(index);
     if (reportsByCategory[index]) {
-      setSelectedCategory(reportsByCategory[index].name);
+      const category = reportsByCategory[index].name;
+      toggleCategory(category);
+      
+      if (selectedCategories.includes(category)) {
+        setActiveIndex(index);
+      } else if (selectedCategories.length === 0) {
+        setActiveIndex(undefined);
+      }
     }
   };
 
@@ -368,6 +402,14 @@ const DashboardContent = () => {
       toast.error("Export failed", {
         description: "There was an error exporting the category data. Please try again."
       });
+    }
+  };
+
+  const toggleCategory = (category: string) => {
+    if (selectedCategories.includes(category)) {
+      setSelectedCategories(selectedCategories.filter(cat => cat !== category));
+    } else {
+      setSelectedCategories([...selectedCategories, category]);
     }
   };
 
@@ -865,20 +907,22 @@ const DashboardContent = () => {
                   <div>
                     <CardTitle>Reports by Category</CardTitle>
                     <CardDescription>
-                      Distribution of reports across different categories
+                      {selectedCategories.length > 0 
+                        ? `${selectedCategories.length} ${selectedCategories.length === 1 ? 'categoría' : 'categorías'} seleccionadas` 
+                        : "Seleccione una o más categorías"}
                     </CardDescription>
                   </div>
                   <div className="flex items-center gap-2">
-                    {selectedCategory && (
+                    {selectedCategories.length > 0 && (
                       <Badge 
                         variant="outline" 
                         className="bg-blue-50 text-blue-700 hover:bg-blue-100 cursor-pointer"
                         onClick={() => {
-                          setSelectedCategory(null);
+                          setSelectedCategories([]);
                           setActiveIndex(undefined);
                         }}
                       >
-                        Filtering by: {selectedCategory} × Clear
+                        {selectedCategories.length} {selectedCategories.length === 1 ? 'categoría' : 'categorías'} seleccionadas × Limpiar
                       </Badge>
                     )}
                     <Button
@@ -892,20 +936,34 @@ const DashboardContent = () => {
                     </Button>
                   </div>
                 </div>
+                {selectedCategories.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {selectedCategories.map(category => (
+                      <Badge 
+                        key={category} 
+                        variant="secondary"
+                        className="flex items-center gap-1 cursor-pointer"
+                        onClick={() => toggleCategory(category)}
+                      >
+                        {category}
+                        <X className="h-3 w-3 ml-1" />
+                      </Badge>
+                    ))}
+                  </div>
+                )}
               </CardHeader>
               <CardContent>
                 <div className="h-80" ref={pieChartRef}>
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-                      {/* Donut chart con centro hueco */}
                       <Pie
                         data={reportsByCategory}
                         cx="50%"
                         cy="50%"
-                        innerRadius={70}  // Añade un radio interior para crear el agujero
-                        outerRadius={100} // Radio exterior de la dona
+                        innerRadius={70}
+                        outerRadius={100}
                         fill="#8884d8"
-                        paddingAngle={2}  // Separación entre segmentos
+                        paddingAngle={2}
                         dataKey="value"
                         activeIndex={activeIndex}
                         activeShape={renderActiveShape}
@@ -918,32 +976,74 @@ const DashboardContent = () => {
                             key={`cell-${index}`} 
                             fill={COLORS[index % COLORS.length]} 
                             style={{ cursor: 'pointer' }}
-                            className="transition-all duration-200 hover:opacity-90"
+                            className={`transition-all duration-200 hover:opacity-90 ${
+                              selectedCategories.includes(entry.name) ? 'opacity-100' : 'opacity-60'
+                            }`}
                           />
                         ))}
                       </Pie>
                       <Tooltip />
-                      {/* Texto central con la categoría seleccionada */}
                       {renderCenterLabel()}
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
+                {selectedCategories.length > 0 && (
+                  <div className="mt-4 bg-gray-50 p-4 rounded-lg border">
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <h3 className="font-medium">Categorías seleccionadas ({selectedCategories.length})</h3>
+                        <span className="text-sm font-semibold">
+                          {reportsByCategory
+                            .filter(cat => selectedCategories.includes(cat.name))
+                            .reduce((sum, cat) => sum + cat.value, 0)} reportes
+                        </span>
+                      </div>
+                      <div className="space-y-2 max-h-40 overflow-y-auto">
+                        {reportsByCategory
+                          .filter(cat => selectedCategories.includes(cat.name))
+                          .map((cat, index) => {
+                            const color = COLORS[reportsByCategory.findIndex(c => c.name === cat.name) % COLORS.length];
+                            const totalSelectedReports = reportsByCategory
+                              .filter(c => selectedCategories.includes(c.name))
+                              .reduce((sum, c) => sum + c.value, 0);
+                            const percentage = ((cat.value / totalSelectedReports) * 100).toFixed(1);
+                            
+                            return (
+                              <div 
+                                key={cat.name} 
+                                className="flex justify-between items-center p-2 bg-white rounded shadow-sm"
+                                style={{ borderLeft: `4px solid ${color}` }}
+                              >
+                                <span>{cat.name}</span>
+                                <div className="flex items-center gap-2">
+                                  <span className="font-semibold">{cat.value}</span>
+                                  <span className="text-xs text-muted-foreground">
+                                    ({percentage}%)
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                      </div>
+                    </div>
+                  </div>
+                )}
                 <div className="mt-4 text-center text-sm">
                   <p className="text-muted-foreground mb-2">
-                    Mouse over a category to apply filter
+                    Haga clic en una categoría para seleccionarla/deseleccionarla
                   </p>
-                  {selectedCategory && (
+                  {selectedCategories.length > 0 && (
                     <Button 
                       variant="outline" 
                       size="sm"
                       onClick={() => {
-                        setSelectedCategory(null);
+                        setSelectedCategories([]);
                         setActiveIndex(undefined);
                       }}
                       className="flex items-center"
                     >
                       <FilterX className="h-4 w-4 mr-2" />
-                      Clear category filter
+                      Limpiar filtros
                     </Button>
                   )}
                 </div>
@@ -961,15 +1061,15 @@ const DashboardContent = () => {
                   Geographic distribution of reported issues
                 </CardDescription>
               </div>
-              {selectedCategory && activeReportTab === "categories" && (
+              {selectedCategories.length > 0 && activeReportTab === "categories" && (
                 <Badge variant="outline" className="bg-blue-50 text-blue-700 flex items-center gap-1">
-                  <span>Showing: {selectedCategory}</span>
+                  <span>Mostrando: {selectedCategories.length} {selectedCategories.length === 1 ? 'categoría' : 'categorías'}</span>
                   <Button 
                     variant="ghost" 
                     size="icon" 
                     className="h-4 w-4 p-0 hover:bg-transparent"
                     onClick={() => {
-                      setSelectedCategory(null);
+                      setSelectedCategories([]);
                       setActiveIndex(undefined);
                     }}
                   >
@@ -982,7 +1082,8 @@ const DashboardContent = () => {
           <CardContent className="p-0">
             <MapView 
               height="330px" 
-              categoryOnly={activeReportTab === "categories"}
+              categoryOnly={activeReportTab === "categories" && selectedCategories.length > 0}
+              ignoreFilters={true}
             />
           </CardContent>
         </Card>

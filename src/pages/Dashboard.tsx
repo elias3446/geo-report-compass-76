@@ -76,6 +76,32 @@ const Dashboard = () => {
     toggleCategory(category);
   };
   
+  // Calcular el total de reportes para las categorías seleccionadas
+  const getSelectedCategoriesInfo = () => {
+    if (selectedCategories.length === 0) return null;
+    
+    const selectedCategoriesData = categoryData.filter(cat => 
+      selectedCategories.includes(cat.category)
+    );
+    
+    const totalSelectedReports = selectedCategoriesData.reduce(
+      (sum, cat) => sum + cat.count, 0
+    );
+    
+    const totalAllReports = categoryData.reduce(
+      (sum, cat) => sum + cat.count, 0
+    );
+    
+    return {
+      categories: selectedCategoriesData,
+      totalReports: totalSelectedReports,
+      percentage: ((totalSelectedReports / totalAllReports) * 100).toFixed(1)
+    };
+  };
+  
+  // Información de las categorías seleccionadas
+  const selectedCategoriesInfo = getSelectedCategoriesInfo();
+  
   return (
     <div className="container py-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
@@ -187,7 +213,7 @@ const Dashboard = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="p-0">
-            <MapView />
+            <MapView ignoreFilters={true} />
           </CardContent>
           <div className="px-6 py-4">
             <Button
@@ -207,7 +233,7 @@ const Dashboard = () => {
             <CardTitle>Reports by Category</CardTitle>
             <CardDescription>
               {selectedCategories.length > 0 
-                ? "Multiple categories selected" 
+                ? `${selectedCategories.length} ${selectedCategories.length === 1 ? 'category' : 'categories'} selected` 
                 : "Click bars to filter by category"}
             </CardDescription>
             {selectedCategories.length > 0 && (
@@ -227,7 +253,7 @@ const Dashboard = () => {
                   variant="ghost" 
                   size="sm" 
                   className="text-xs px-2 h-6"
-                  onClick={() => toggleCategory("")}
+                  onClick={() => selectedCategories.forEach(cat => toggleCategory(cat))}
                 >
                   Clear all
                 </Button>
@@ -274,6 +300,38 @@ const Dashboard = () => {
                   />
                 </BarChart>
               </ResponsiveContainer>
+            </div>
+            
+            {/* Centro de la gráfica con información de categorías seleccionadas */}
+            <div className="mt-4 bg-gray-50 p-4 rounded-lg border">
+              {selectedCategories.length === 0 ? (
+                <div className="text-center">
+                  <p className="text-lg font-medium">Categorías</p>
+                  <p className="text-sm text-muted-foreground">Seleccione una o más categorías para ver detalles</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <h3 className="font-medium">Categorías seleccionadas ({selectedCategories.length})</h3>
+                    <span className="text-sm font-semibold">
+                      {selectedCategoriesInfo?.totalReports} reportes ({selectedCategoriesInfo?.percentage}%)
+                    </span>
+                  </div>
+                  <div className="space-y-2 max-h-40 overflow-y-auto">
+                    {selectedCategoriesInfo?.categories.map(cat => (
+                      <div key={cat.category} className="flex justify-between items-center p-2 bg-white rounded shadow-sm">
+                        <span>{cat.category}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold">{cat.count}</span>
+                          <span className="text-xs text-muted-foreground">
+                            ({((cat.count / (selectedCategoriesInfo?.totalReports || 1)) * 100).toFixed(1)}%)
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </CardContent>
           <CardFooter>
