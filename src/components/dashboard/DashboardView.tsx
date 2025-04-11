@@ -38,7 +38,8 @@ import {
   Edit,
   Eye,
   FilterX,
-  Download
+  Download,
+  X
 } from "lucide-react";
 import MapView from "@/components/map/MapView";
 import { useEffect, useState, useMemo, useRef } from "react";
@@ -75,6 +76,7 @@ const DashboardContent = () => {
     showClosedReports,
     showInProgressReports,
     selectedCategory,
+    selectedCategories,
     setTimeFrame,
     setSelectedYear,
     setSelectedMonth,
@@ -82,7 +84,9 @@ const DashboardContent = () => {
     setShowOpenReports,
     setShowClosedReports,
     setShowInProgressReports,
-    setSelectedCategory
+    setSelectedCategory,
+    setSelectedCategories,
+    toggleCategory
   } = useTimeFilter();
   
   const [stats, setStats] = useState({
@@ -404,45 +408,6 @@ const DashboardContent = () => {
       });
     }
   };
-
-  const toggleCategory = (category: string) => {
-    if (selectedCategories.includes(category)) {
-      setSelectedCategories(selectedCategories.filter(cat => cat !== category));
-    } else {
-      setSelectedCategories([...selectedCategories, category]);
-    }
-  };
-
-  useEffect(() => {
-    if (selectedMonth !== undefined && selectedYear !== undefined) {
-      const days = new Date(selectedYear, selectedMonth + 1, 0).getDate();
-      const daysArray = Array.from({ length: days }, (_, i) => i + 1);
-      setDaysInMonth(daysArray);
-      
-      if (selectedDay > days) {
-        setSelectedDay(days);
-      } else if (!selectedDay && daysArray.length > 0) {
-        setSelectedDay(1);
-      }
-    }
-  }, [selectedMonth, selectedYear, selectedDay, setSelectedDay]);
-
-  useEffect(() => {
-    if (allReports && allReports.length > 0) {
-      const years = allReports.map(report => new Date(report.createdAt).getFullYear());
-      const uniqueYears = Array.from(new Set(years)).sort();
-      
-      if (uniqueYears.length === 0 || Math.min(...uniqueYears) > new Date().getFullYear()) {
-        uniqueYears.unshift(new Date().getFullYear());
-      }
-      
-      setAvailableYears(uniqueYears);
-      
-      if (uniqueYears.length > 0 && !selectedYear) {
-        setSelectedYear(Math.max(...uniqueYears));
-      }
-    }
-  }, [allReports, selectedYear, setSelectedYear]);
 
   const generateChartData = (): ReportTimeData[] => {
     if (!allReports || !allReports.length) return [];

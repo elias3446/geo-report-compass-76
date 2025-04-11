@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -33,7 +34,7 @@ interface MapViewProps {
 const MapView = ({ height = "500px", categoryOnly = false, ignoreFilters = false }: MapViewProps) => {
   const { reports: allReports } = useReports();
   const { selectedCategories } = useTimeFilter();
-  const [mapCenter, setMapCenter] = useState([51.505, -0.09]); // Default map center
+  const [mapCenter, setMapCenter] = useState<[number, number]>([51.505, -0.09]); // Default map center
   const [zoomLevel, setZoomLevel] = useState(5);
   const mapRef = useRef(null);
 
@@ -43,18 +44,26 @@ const MapView = ({ height = "500px", categoryOnly = false, ignoreFilters = false
       let sumLat = 0;
       let sumLng = 0;
       allReports.forEach(report => {
-        sumLat += report.latitude;
-        sumLng += report.longitude;
+        // Check if latitude and longitude exist on the report
+        if (report.lat !== undefined && report.lng !== undefined) {
+          sumLat += report.lat;
+          sumLng += report.lng;
+        } else if (report.latitude !== undefined && report.longitude !== undefined) {
+          sumLat += report.latitude;
+          sumLng += report.longitude;
+        }
       });
       const avgLat = sumLat / allReports.length;
       const avgLng = sumLng / allReports.length;
 
-      setMapCenter([avgLat, avgLng]);
-      setZoomLevel(10);
+      if (!isNaN(avgLat) && !isNaN(avgLng)) {
+        setMapCenter([avgLat, avgLng]);
+        setZoomLevel(10);
+      }
     }
   }, [allReports]);
 
-  // Obtener reportes filtrados basados en las categorías seleccionadas
+  // Get filtered reports based on the selected categories
   const getFilteredReports = () => {
     if (ignoreFilters) {
       return allReports;
@@ -87,6 +96,14 @@ const MapView = ({ height = "500px", categoryOnly = false, ignoreFilters = false
         };
     
         filteredReports.forEach(report => {
+          const latitude = report.lat || report.latitude;
+          const longitude = report.lng || report.longitude;
+          
+          if (latitude === undefined || longitude === undefined) {
+            console.warn('Report missing coordinates:', report);
+            return;
+          }
+          
           const feature = {
             type: "Feature",
             properties: {
@@ -99,7 +116,7 @@ const MapView = ({ height = "500px", categoryOnly = false, ignoreFilters = false
             },
             geometry: {
               type: "Point",
-              coordinates: [report.longitude, report.latitude]
+              coordinates: [longitude, latitude]
             }
           };
           geojsonData.features.push(feature);
@@ -121,13 +138,13 @@ const MapView = ({ height = "500px", categoryOnly = false, ignoreFilters = false
     return null;
   };
 
-  // Usar los reportes filtrados para el mapa
+  // Use the filtered reports for the map
   const filteredReports = getFilteredReports();
 
   return (
     <div className="relative" style={{ height: height || "500px" }}>
       <MapContainer 
-        center={mapCenter} 
+        center={mapCenter as [number, number]} 
         zoom={zoomLevel} 
         style={{ height: height || "500px", width: "100%" }}
         ref={mapRef}
@@ -136,18 +153,27 @@ const MapView = ({ height = "500px", categoryOnly = false, ignoreFilters = false
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         />
-        {filteredReports.map(report => (
-          <Marker 
-            key={report.id} 
-            position={[report.latitude, report.longitude]}
-          >
-            <Popup>
-              <h2>{report.title}</h2>
-              <p>{report.description}</p>
-              <p>Category: {report.category}</p>
-            </Popup>
-          </Marker>
-        ))}
+        {filteredReports.map(report => {
+          const latitude = report.lat || report.latitude;
+          const longitude = report.lng || report.longitude;
+          
+          if (latitude === undefined || longitude === undefined) {
+            return null;
+          }
+          
+          return (
+            <Marker 
+              key={report.id} 
+              position={[latitude, longitude]}
+            >
+              <Popup>
+                <h2>{report.title}</h2>
+                <p>{report.description}</p>
+                <p>Category: {report.category}</p>
+              </Popup>
+            </Marker>
+          );
+        })}
         <ExportMapData />
       </MapContainer>
     </div>
