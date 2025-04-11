@@ -1,247 +1,356 @@
+import { useState, useEffect, useMemo } from "react";
+import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
+import L from "leaflet";
+import { getReports } from "@/services/reportService";
+import { useTimeFilter } from "@/context/TimeFilterContext";
+import { toast } from "sonner";
 
-import React, { useEffect, useState, useRef } from 'react';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
-import { useReports } from '@/contexts/ReportContext';
-import { useTimeFilter } from '@/context/TimeFilterContext';
-import { toast } from 'sonner';
+// Create custom marker icons for different report status
+const getReportIcon = (status: string) => {
+  // Define icon configurations based on status
+  if (status === "Open") {
+    return new L.Icon({
+      iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png",
+      shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png",
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+      popupAnchor: [1, -34],
+      shadowSize: [41, 41],
+    });
+  } else if (status === "In Progress") {
+    return new L.Icon({
+      iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-yellow.png",
+      shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png",
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+      popupAnchor: [1, -34],
+      shadowSize: [41, 41],
+    });
+  } else {
+    return new L.Icon({
+      iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png",
+      shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png",
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+      popupAnchor: [1, -34],
+      shadowSize: [41, 41],
+    });
+  }
+};
 
-// Fix for default markers
-delete L.Icon.Default.prototype._getIconUrl;
+// Mock locations for sample reports
+const sampleLocations: Record<string, [number, number]> = {
+  "Av. Reforma 123": [19.4326, -99.1332],
+  "Calle 16 de Septiembre": [19.4328, -99.1386],
+  "Parque Lincoln": [19.4284, -99.2007],
+  "Bosque de Chapultepec": [19.4120, -99.1946],
+  "Insurgentes Sur": [19.3984, -99.1713],
+  "Centro Histórico": [19.4326, -99.1332],
+  "Paseo de la Reforma": [19.4284, -99.1557],
+  "Polanco": [19.4284, -99.1907],
+  "Condesa": [19.4128, -99.1732],
+  "Roma Norte": [19.4195, -99.1599],
+};
 
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-});
+// Default location (Mexico City)
+const defaultCenter: [number, number] = [19.4326, -99.1332];
 
 interface MapViewProps {
   height?: string;
   filterStatus?: string;
-  isStandalone?: boolean;
   categoryOnly?: boolean;
+  isStandalone?: boolean;
 }
 
-// Create custom marker icons
-const createMarkerIcon = (color: string) => {
-  return new L.Icon({
-    iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-${color}.png`,
-    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-    iconSize: [25, 41],
-    iconAnchor: [12, 41],
-    popupAnchor: [1, -34],
-    shadowSize: [41, 41]
-  });
-};
+const MapView = ({
+  height = "500px",
+  filterStatus,
+  categoryOnly = false,
+  isStandalone = false
+}: MapViewProps) => {
+  const [reports, setReports] = useState<any[]>([]);
+  const [refreshKey, setRefreshKey] = useState(0);
 
-const redIcon = createMarkerIcon('red');
-const greenIcon = createMarkerIcon('green');
-const blueIcon = createMarkerIcon('blue');
-const yellowIcon = createMarkerIcon('yellow');
-const orangeIcon = createMarkerIcon('orange');
-const greyIcon = createMarkerIcon('grey');
+  // Use optional chaining with useTimeFilter to handle cases when TimeFilterProvider is not available
+  const {
+    timeFrame,
+    selectedYear,
+    selectedMonth,
+    selectedDay,
+    showOpenReports,
+    showClosedReports,
+    showInProgressReports,
+    selectedCategory,
+    selectedCategories
+  } = isStandalone ? {
+    timeFrame: undefined,
+    selectedYear: undefined,
+    selectedMonth: undefined,
+    selectedDay: undefined,
+    showOpenReports: true,
+    showClosedReports: true,
+    showInProgressReports: true,
+    selectedCategory: null,
+    selectedCategories: []
+  } : useTimeFilter();
 
-const getMarkerIcon = (status: string, category: string | undefined) => {
-  const lowercaseCategory = category?.toLowerCase();
-  
-  if (lowercaseCategory?.includes('urgent') || lowercaseCategory?.includes('emergency')) {
-    return redIcon;
-  }
-  
-  switch (status) {
-    case 'Open':
-      return blueIcon;
-    case 'In Progress':
-      return yellowIcon;
-    case 'Resolved':
-      return greenIcon;
-    case 'approved':
-      return greenIcon;
-    case 'rejected':
-      return redIcon;
-    case 'draft':
-      return greyIcon;
-    case 'submitted':
-      return orangeIcon;
-    default:
-      return blueIcon;
-  }
-};
-
-const getStatusColor = (status: string) => {
-  switch (status) {
-    case 'Open':
-      return 'bg-blue-500';
-    case 'In Progress':
-      return 'bg-yellow-500';
-    case 'Resolved':
-      return 'bg-green-500';
-    case 'approved':
-      return 'bg-green-500';
-    case 'rejected':
-      return 'bg-red-500';
-    case 'draft':
-      return 'bg-gray-500';
-    case 'submitted':
-      return 'bg-orange-500';
-    default:
-      return 'bg-blue-500';
-  }
-};
-
-const getCategoryColor = (category: string) => {
-  const colors = [
-    'bg-blue-500', 'bg-green-500', 'bg-purple-500', 
-    'bg-pink-500', 'bg-indigo-500', 'bg-teal-500'
-  ];
-  
-  // Simple hash to pick a consistent color for each category
-  let hash = 0;
-  for (let i = 0; i < category.length; i++) {
-    hash = category.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  
-  return colors[Math.abs(hash) % colors.length];
-};
-
-const MapView: React.FC<MapViewProps> = ({ 
-  height = '400px', 
-  filterStatus = 'all',
-  isStandalone = false,
-  categoryOnly = false
-}) => {
-  const { reports } = useReports();
-  const { selectedCategories } = useTimeFilter();
-  const mapRef = useRef<HTMLDivElement>(null);
-  const [filteredReports, setFilteredReports] = useState<any[]>([]);
-  
+  // Fetch reports data
   useEffect(() => {
-    const reportOverview = document.createEvent('CustomEvent');
-    document.addEventListener('export-map-data', handleExportMapData);
+    const reportData = getReports();
+    setReports(reportData);
     
-    return () => {
-      document.removeEventListener('export-map-data', handleExportMapData);
-    };
-  }, [filteredReports]);
-  
-  useEffect(() => {
-    let filtered = [...reports];
+    // Set up polling for real-time updates
+    const intervalId = setInterval(() => {
+      setRefreshKey(prev => prev + 1);
+    }, 5000);
     
-    // Filter by status
-    if (filterStatus !== 'all') {
-      filtered = filtered.filter(report => {
-        switch (filterStatus) {
-          case 'open':
-            return report.status === 'Open' || report.status === 'submitted';
-          case 'progress':
-            return report.status === 'In Progress';
-          case 'resolved':
-            return report.status === 'Resolved' || report.status === 'approved';
-          default:
-            return true;
+    return () => clearInterval(intervalId);
+  }, [refreshKey]);
+
+  // Filter reports based on status filters and time period
+  const filteredReports = useMemo(() => {
+    let filtered = reports;
+    
+    // If this is a standalone map (from the Map page), only apply the filterStatus
+    if (isStandalone) {
+      if (filterStatus) {
+        if (filterStatus === "open") {
+          filtered = filtered.filter(report => report.status === "Open");
+        } else if (filterStatus === "progress") {
+          filtered = filtered.filter(report => report.status === "In Progress");
+        } else if (filterStatus === "resolved") {
+          filtered = filtered.filter(report => report.status === "Resolved");
         }
-      });
+      }
+      return filtered;
     }
     
-    // Filter by category
-    if (categoryOnly && selectedCategories.length > 0) {
+    // Otherwise apply all filters from TimeFilterContext (for dashboard view)
+    if (!categoryOnly) {
+      if (selectedYear !== undefined) {
+        filtered = filtered.filter(report => {
+          const reportDate = new Date(report.createdAt);
+          return reportDate.getFullYear() === selectedYear;
+        });
+      }
+  
+      if (timeFrame === "month" && selectedMonth !== undefined) {
+        filtered = filtered.filter(report => {
+          const reportDate = new Date(report.createdAt);
+          return reportDate.getMonth() === selectedMonth;
+        });
+      } else if (timeFrame === "week" && selectedMonth !== undefined) {
+        // For week view, we approximate by filtering the current month
+        // and then checking the day within the week
+        filtered = filtered.filter(report => {
+          const reportDate = new Date(report.createdAt);
+          return reportDate.getMonth() === selectedMonth;
+          // A more precise week filter would be implemented here
+        });
+      } else if (timeFrame === "day" && selectedMonth !== undefined && selectedDay !== undefined) {
+        filtered = filtered.filter(report => {
+          const reportDate = new Date(report.createdAt);
+          return reportDate.getMonth() === selectedMonth && 
+                reportDate.getDate() === selectedDay;
+        });
+      }
+    }
+    
+    // Apply multiple category filter if selectedCategories has items
+    if (selectedCategories && selectedCategories.length > 0) {
       filtered = filtered.filter(report => 
         selectedCategories.includes(report.category)
       );
+    } 
+    // Otherwise, apply single category filter if selected and no multi-selection is active
+    else if (selectedCategory && (!selectedCategories || selectedCategories.length === 0)) {
+      filtered = filtered.filter(report => report.category === selectedCategory);
     }
     
-    setFilteredReports(filtered);
-  }, [reports, filterStatus, selectedCategories, categoryOnly]);
-  
-  const handleExportMapData = () => {
-    try {
-      const data = filteredReports.map(report => ({
-        id: report.id,
-        title: report.title,
-        description: report.description,
-        status: report.status,
-        category: report.category,
-        location: report.location,
-        coordinates: report.coordinates,
-        createdAt: report.createdAt
-      }));
+    // Then apply status filters if not in categoryOnly mode
+    if (!categoryOnly) {
+      // If a specific filterStatus is provided (from the MapPage), use that
+      if (filterStatus) {
+        if (filterStatus === "open") {
+          filtered = filtered.filter(report => report.status === "Open");
+        } else if (filterStatus === "progress") {
+          filtered = filtered.filter(report => report.status === "In Progress");
+        } else if (filterStatus === "resolved") {
+          filtered = filtered.filter(report => report.status === "Resolved");
+        }
+        // If "all" is selected, keep all reports
+        return filtered;
+      }
       
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `map-data-export-${new Date().toISOString().slice(0, 10)}.json`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      toast.success('Map data exported successfully!');
-    } catch (error) {
-      console.error('Error exporting map data:', error);
-      toast.error('Failed to export map data.');
+      // Otherwise use the global filter context
+      return filtered.filter(report => {
+        if (report.status === "Open" && showOpenReports) return true;
+        if (report.status === "In Progress" && showInProgressReports) return true;
+        if (report.status === "Resolved" && showClosedReports) return true;
+        return false;
+      });
     }
+    
+    // When categoryOnly is true, we don't apply status filters
+    return filtered;
+  }, [
+    reports, 
+    showOpenReports, 
+    showClosedReports, 
+    showInProgressReports, 
+    filterStatus, 
+    timeFrame, 
+    selectedYear, 
+    selectedMonth, 
+    selectedDay,
+    selectedCategory,
+    selectedCategories,
+    categoryOnly,
+    isStandalone
+  ]);
+
+  // Get coordinates for each report
+  const getCoordinates = (location: string): [number, number] => {
+    return sampleLocations[location] || defaultCenter;
   };
-  
+
+  // Export reports to CSV
+  const exportToCSV = () => {
+    if (filteredReports.length === 0) {
+      toast.error("No hay reportes para exportar");
+      return;
+    }
+    
+    // Define CSV headers based on report properties
+    const headers = [
+      "ID", 
+      "Título", 
+      "Descripción", 
+      "Estado", 
+      "Prioridad", 
+      "Categoría", 
+      "Ubicación", 
+      "Fecha de Creación", 
+      "Latitud", 
+      "Longitud"
+    ].join(",");
+    
+    // Convert each report to CSV row
+    const csvRows = filteredReports.map(report => {
+      const coordinates = getCoordinates(report.location);
+      // Check if properties exist before accessing them to avoid undefined errors
+      const safeTitle = report.title ? report.title.replace(/"/g, '""') : "";
+      const safeDescription = report.description ? report.description.replace(/"/g, '""') : "";
+      const safeLocation = report.location ? report.location.replace(/"/g, '""') : "";
+      
+      return [
+        report.id || "",
+        `"${safeTitle}"`,
+        `"${safeDescription}"`,
+        report.status || "",
+        report.priority || "",
+        report.category || "",
+        `"${safeLocation}"`,
+        report.createdAt ? new Date(report.createdAt).toISOString() : "",
+        coordinates[0],
+        coordinates[1]
+      ].join(",");
+    });
+    
+    // Combine headers and rows
+    const csvContent = [headers, ...csvRows].join("\n");
+    
+    // Create download link
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    
+    // Set file name based on current filter
+    let fileName = "todos_los_reportes.csv";
+    if (isStandalone && filterStatus) {
+      if (filterStatus === "open") fileName = "reportes_abiertos.csv";
+      else if (filterStatus === "progress") fileName = "reportes_en_progreso.csv";
+      else if (filterStatus === "resolved") fileName = "reportes_resueltos.csv";
+      else fileName = "todos_los_reportes.csv";
+    } else if (selectedCategory) {
+      fileName = `reportes_${selectedCategory.toLowerCase().replace(/\s+/g, '_')}.csv`;
+    }
+    
+    // Configure link for download
+    link.setAttribute("href", url);
+    link.setAttribute("download", fileName);
+    
+    // Add to document, click to download, then remove
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    // Notify user
+    toast.success(`Exportación completada: ${fileName}`);
+  };
+
+  // Add event listener for export button click
+  useEffect(() => {
+    const handleExportEvent = () => {
+      console.log("Export event triggered, exporting reports:", filteredReports.length);
+      exportToCSV();
+    };
+    
+    document.addEventListener("export-map-data", handleExportEvent);
+    
+    return () => {
+      document.removeEventListener("export-map-data", handleExportEvent);
+    };
+  }, [filteredReports]);
+
+  // Log the filtered reports for debugging
+  useEffect(() => {
+    if (isStandalone) {
+      console.log(`Standalone map showing ${filteredReports.length} reports with filter: ${filterStatus || 'all'}`);
+    } else {
+      console.log(`Dashboard map showing ${filteredReports.length} reports for ${timeFrame} view with year=${selectedYear}, month=${selectedMonth}, day=${selectedDay}`);
+      console.log('Status filters:', { showOpenReports, showInProgressReports, showClosedReports });
+      
+      if (selectedCategories && selectedCategories.length > 0) {
+        console.log(`Multiple categories filter applied: ${selectedCategories.join(', ')}`);
+      } else if (selectedCategory) {
+        console.log(`Category filter applied: ${selectedCategory}`);
+      }
+    }
+  }, [filteredReports, timeFrame, selectedYear, selectedMonth, selectedDay, showOpenReports, showInProgressReports, showClosedReports, selectedCategory, selectedCategories, isStandalone, filterStatus]);
+
   return (
-    <div ref={mapRef} style={{ height: height, width: '100%' }}>
-      {filteredReports.length > 0 ? (
-        <MapContainer 
-          center={[51.505, -0.09]} 
-          zoom={13} 
-          style={{ height: '100%', width: '100%' }}
-        >
-          <TileLayer
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          />
-          {filteredReports.map((report, index) => (
-            report.coordinates ? (
-              <Marker 
-                key={index}
-                position={[report.coordinates.lat, report.coordinates.lng]}
-                icon={getMarkerIcon(report.status, report.category)}
-              >
-                <Popup className="map-popup">
-                  <div className="p-2">
-                    <h3 className="font-bold text-base">{report.title}</h3>
-                    <div className="flex items-center mt-1">
-                      <span className={`inline-block w-2 h-2 rounded-full mr-1 ${getStatusColor(report.status)}`}></span>
-                      <span className="text-xs font-medium">{report.status}</span>
-                    </div>
-                    <div className="flex items-center mt-1">
-                      <span className={`inline-block w-2 h-2 rounded-full mr-1 ${getCategoryColor(report.category)}`}></span>
-                      <span className="text-xs">{report.category}</span>
-                    </div>
-                    <p className="text-xs mt-2 text-gray-600 line-clamp-2">{report.description}</p>
-                    {isStandalone && (
-                      <button 
-                        className="mt-2 text-xs text-blue-600 hover:text-blue-800 font-medium"
-                        onClick={() => {
-                          window.location.href = `/reports/${report.id}`;
-                        }}
-                      >
-                        View Details
-                      </button>
-                    )}
-                  </div>
-                </Popup>
-              </Marker>
-            ) : null
-          ))}
-        </MapContainer>
-      ) : (
-        <div className="flex items-center justify-center h-full bg-gray-50 border rounded-md">
-          <div className="text-center p-6">
-            <p className="text-gray-500 mb-2">No map data available</p>
-            <p className="text-sm text-gray-400">
-              {selectedCategories.length > 0 
-                ? 'No reports match the selected category filters' 
-                : 'No reports with location data found'}
-            </p>
-          </div>
-        </div>
-      )}
+    <div style={{ height, width: "100%" }}>
+      <MapContainer 
+        center={defaultCenter}
+        zoom={13}
+        style={{ height: "100%", width: "100%" }}
+      >
+        <TileLayer
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        />
+        
+        {filteredReports.map((report, index) => (
+          <Marker 
+            key={index}
+            position={getCoordinates(report.location)}
+            icon={getReportIcon(report.status)}
+          >
+            <Popup>
+              <div className="p-1">
+                <h3 className="font-semibold">{report.title}</h3>
+                <p className="text-sm mt-1">Estado: {report.status}</p>
+                <p className="text-sm">Ubicación: {report.location}</p>
+                <p className="text-sm">Categoría: {report.category}</p>
+                <p className="text-sm">Prioridad: {report.priority}</p>
+                <p className="text-sm">Fecha: {new Date(report.createdAt).toLocaleDateString()}</p>
+              </div>
+            </Popup>
+          </Marker>
+        ))}
+      </MapContainer>
     </div>
   );
 };

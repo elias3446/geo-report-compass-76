@@ -2,8 +2,8 @@
 import React, { createContext, useContext, useState, ReactNode } from "react";
 
 interface TimeFilterContextType {
-  timeFrame: "month" | "week" | "day" | "year";
-  setTimeFrame: (timeFrame: "month" | "week" | "day" | "year") => void;
+  timeFrame: "month" | "week" | "day";
+  setTimeFrame: (timeFrame: "month" | "week" | "day") => void;
   selectedYear: number;
   setSelectedYear: (year: number) => void;
   selectedMonth: number;
@@ -29,7 +29,7 @@ export const TimeFilterProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
   const currentDate = new Date();
-  const [timeFrame, setTimeFrame] = useState<"month" | "week" | "day" | "year">("month");
+  const [timeFrame, setTimeFrame] = useState<"month" | "week" | "day">("month");
   const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth());
   const [selectedDay, setSelectedDay] = useState<number | undefined>(undefined);
