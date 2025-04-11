@@ -2,7 +2,6 @@
 import AppLayout from "@/components/layout/AppLayout";
 import DashboardView from "@/components/dashboard/DashboardView";
 import { TimeFilterProvider } from "@/context/TimeFilterContext";
-import { ReportProvider } from "@/contexts/ReportContext";
 
 const Index = () => {
   return (
@@ -13,11 +12,9 @@ const Index = () => {
           Overview of reports and analytics
         </p>
       </div>
-      <ReportProvider>
-        <TimeFilterProvider>
-          <DashboardView />
-        </TimeFilterProvider>
-      </ReportProvider>
+      <TimeFilterProvider>
+        <DashboardView />
+      </TimeFilterProvider>
     </AppLayout>
   );
 };
