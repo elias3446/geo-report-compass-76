@@ -908,16 +908,13 @@ const DashboardContent = () => {
                     </CardDescription>
                   </div>
                   <div className="flex items-center gap-2">
-                    {selectedCategory && (
+                    {selectedCategories.length > 0 && (
                       <Badge 
                         variant="outline" 
                         className="bg-blue-50 text-blue-700 hover:bg-blue-100 cursor-pointer"
-                        onClick={() => {
-                          setSelectedCategory(null);
-                          setActiveIndex(undefined);
-                        }}
+                        onClick={clearAllSelectedCategories}
                       >
-                        Filtering by: {selectedCategory} × Clear
+                        {selectedCategories.length} {selectedCategories.length === 1 ? 'category' : 'categories'} selected × Clear
                       </Badge>
                     )}
                     <Button
@@ -933,56 +930,89 @@ const DashboardContent = () => {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="h-80" ref={pieChartRef}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={reportsByCategory}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={70}
-                        outerRadius={100}
-                        fill="#8884d8"
-                        paddingAngle={2}
-                        dataKey="value"
-                        activeIndex={getActiveIndices()}
-                        activeShape={renderActiveShape}
-                        onMouseEnter={onPieEnter}
-                        onMouseLeave={onPieLeave}
-                        onClick={onPieClick}
+                <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+                  <div className="lg:col-span-3 h-80" ref={pieChartRef}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={reportsByCategory}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={70}
+                          outerRadius={100}
+                          fill="#8884d8"
+                          paddingAngle={2}
+                          dataKey="value"
+                          activeIndex={getActiveIndices()}
+                          activeShape={renderActiveShape}
+                          onMouseEnter={onPieEnter}
+                          onMouseLeave={onPieLeave}
+                          onClick={onPieClick}
+                        >
+                          {reportsByCategory.map((entry, index) => (
+                            <Cell 
+                              key={`cell-${index}`} 
+                              fill={COLORS[index % COLORS.length]} 
+                              style={{ 
+                                cursor: 'pointer',
+                                opacity: selectedCategories.length > 0 && !selectedCategories.includes(entry.name) ? 0.5 : 1 
+                              }}
+                              className="transition-all duration-200 hover:opacity-90"
+                            />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                        {renderCenterLabel()}
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                  <div className="lg:col-span-2 flex flex-col justify-center">
+                    <h3 className="text-lg font-semibold mb-4">Category Details</h3>
+                    <div className="space-y-3 overflow-y-auto max-h-64 pr-2">
+                      {reportsByCategory.map((category, index) => {
+                        const categoryColor = COLORS[index % COLORS.length];
+                        const totalCount = reportsByCategory.reduce((sum, cat) => sum + cat.value, 0);
+                        const percentage = ((category.value / totalCount) * 100).toFixed(1);
+                        const isSelected = selectedCategories.includes(category.name);
+                        
+                        return (
+                          <div 
+                            key={category.name}
+                            className={`flex items-center justify-between p-2 rounded-md cursor-pointer hover:bg-slate-50 ${
+                              isSelected ? 'bg-blue-50 border border-blue-200' : ''
+                            }`}
+                            onClick={() => toggleCategory(category.name)}
+                          >
+                            <div className="flex items-center gap-2">
+                              <div 
+                                className="w-4 h-4 rounded-sm" 
+                                style={{ backgroundColor: categoryColor }}
+                              ></div>
+                              <span className={`font-medium ${isSelected ? 'text-blue-700' : ''}`}>
+                                {category.name}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold">{category.value}</span>
+                              <span className="text-muted-foreground text-sm">({percentage}%)</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {selectedCategories.length > 0 && (
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={clearAllSelectedCategories}
+                        className="flex items-center mt-4 self-center"
                       >
-                        {reportsByCategory.map((entry, index) => (
-                          <Cell 
-                            key={`cell-${index}`} 
-                            fill={COLORS[index % COLORS.length]} 
-                            style={{ 
-                              cursor: 'pointer',
-                              opacity: selectedCategories.length > 0 && !selectedCategories.includes(entry.name) ? 0.5 : 1 
-                            }}
-                            className="transition-all duration-200 hover:opacity-90"
-                          />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                      {renderCenterLabel()}
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="mt-4 text-center text-sm">
-                  <p className="text-muted-foreground mb-2">
-                    Click en una categoría para filtrar. Selecciona varias para comparar.
-                  </p>
-                  {selectedCategories.length > 0 && (
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={clearAllSelectedCategories}
-                      className="flex items-center"
-                    >
-                      <FilterX className="h-4 w-4 mr-2" />
-                      Clear category filters
-                    </Button>
-                  )}
+                        <FilterX className="h-4 w-4 mr-2" />
+                        Clear selections
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </CardContent>
             </Card>
