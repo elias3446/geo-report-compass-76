@@ -40,11 +40,23 @@ export const TimeFilterProvider: React.FC<{ children: ReactNode }> = ({
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
 
   const toggleCategory = (category: string) => {
-    setSelectedCategories(prevCategories => 
-      prevCategories.includes(category)
-        ? prevCategories.filter(c => c !== category)
-        : [...prevCategories, category]
-    );
+    setSelectedCategories(prevCategories => {
+      // Si la categoría ya está seleccionada, la quitamos
+      if (prevCategories.includes(category)) {
+        return prevCategories.filter(c => c !== category);
+      } 
+      // Si no está seleccionada, la agregamos
+      else {
+        return [...prevCategories, category];
+      }
+    });
+    
+    // Actualizamos también selectedCategory para mantener compatibilidad
+    if (selectedCategory === category) {
+      setSelectedCategory(null);
+    } else {
+      setSelectedCategory(category);
+    }
   };
 
   return (

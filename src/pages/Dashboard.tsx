@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useReports } from '@/contexts/ReportContext';
@@ -66,7 +65,6 @@ const Dashboard = () => {
   };
 
   const handleExportLocationData = () => {
-    // Create and dispatch the export event specifically for location data
     const exportEvent = new Event('export-map-data');
     document.dispatchEvent(exportEvent);
     toast.success('Exportando datos de ubicaciones...');
