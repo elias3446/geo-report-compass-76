@@ -10,7 +10,7 @@ import Reports from "./pages/Reports";
 import NewReport from "./pages/NewReport";
 import ReportDetail from "./pages/ReportDetail";
 import EditReport from "./pages/EditReport";
-import MapView from "./pages/MapView";
+import MapPage from "./pages/MapView";
 import SettingsPage from "./pages/SettingsPage";
 import NotFound from "./pages/NotFound";
 
@@ -30,7 +30,7 @@ const App = () => {
             <Route path="/reports/:id" element={<ReportDetail />} />
             <Route path="/reports/:id/edit" element={<EditReport />} />
             <Route path="/new-report" element={<NewReport />} />
-            <Route path="/map" element={<MapView />} />
+            <Route path="/map" element={<MapPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

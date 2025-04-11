@@ -37,7 +37,8 @@ import {
   CalendarIcon,
   Edit,
   Eye,
-  FilterX
+  FilterX,
+  Download
 } from "lucide-react";
 import MapView from "@/components/map/MapView";
 import { useEffect, useState, useMemo, useRef } from "react";
@@ -53,6 +54,7 @@ import { TimeFilterProvider, useTimeFilter } from "@/context/TimeFilterContext";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { toast } from "sonner";
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658'];
 
@@ -221,6 +223,152 @@ const DashboardContent = () => {
     setActiveIndex(index);
     if (reportsByCategory[index]) {
       setSelectedCategory(reportsByCategory[index].name);
+    }
+  };
+
+  const handleExportReportsData = () => {
+    try {
+      if (reportsByTimeFrame.length === 0) {
+        toast.info("Nothing to export", {
+          description: "There is no report data available to export."
+        });
+        return;
+      }
+
+      let exportData = JSON.parse(JSON.stringify(reportsByTimeFrame));
+      
+      if (!showOpenReports) {
+        exportData = exportData.map((item: any) => {
+          const { open, ...rest } = item;
+          return rest;
+        });
+      }
+      
+      if (!showInProgressReports) {
+        exportData = exportData.map((item: any) => {
+          const { inProgress, ...rest } = item;
+          return rest;
+        });
+      }
+      
+      if (!showClosedReports) {
+        exportData = exportData.map((item: any) => {
+          const { closed, ...rest } = item;
+          return rest;
+        });
+      }
+      
+      const timeFrameInfo = timeFrame;
+      const yearInfo = selectedYear ? `_${selectedYear}` : '';
+      const monthInfo = selectedMonth !== undefined ? `_${months[selectedMonth]}` : '';
+      const dayInfo = selectedDay ? `_day${selectedDay}` : '';
+      
+      let headers = ['Time Period'];
+      if (showOpenReports) headers.push('Open Reports');
+      if (showInProgressReports) headers.push('In Progress Reports');
+      if (showClosedReports) headers.push('Closed Reports');
+      
+      const csvData = exportData.map((row: any) => {
+        const csvRow = [row.name];
+        if (showOpenReports) csvRow.push(row.open);
+        if (showInProgressReports) csvRow.push(row.inProgress);
+        if (showClosedReports) csvRow.push(row.closed);
+        return csvRow;
+      });
+      
+      csvData.unshift(headers);
+      
+      const csvContent = csvData.map(row => 
+        row.map((field: any) => {
+          const stringField = String(field);
+          if (stringField.includes(',') || stringField.includes('"') || stringField.includes('\n')) {
+            return `"${stringField.replace(/"/g, '""')}"`;
+          }
+          return stringField;
+        }).join(',')
+      ).join('\n');
+      
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      
+      const filename = `reports_${timeFrameInfo}${yearInfo}${monthInfo}${dayInfo}_${new Date().toISOString().split('T')[0]}.csv`;
+      
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      toast.success("Export successful", {
+        description: `${reportsByTimeFrame.length} time periods exported to CSV`
+      });
+    } catch (error) {
+      console.error("Export error:", error);
+      toast.error("Export failed", {
+        description: "There was an error exporting the report data. Please try again."
+      });
+    }
+  };
+
+  const handleExportCategoryData = () => {
+    try {
+      if (reportsByCategory.length === 0) {
+        toast.info("Nothing to export", {
+          description: "There is no category data available to export."
+        });
+        return;
+      }
+      
+      const dataToExport = selectedCategory 
+        ? reportsByCategory.filter(cat => cat.name === selectedCategory)
+        : reportsByCategory;
+      
+      const headers = ['Category', 'Reports Count', 'Percentage'];
+      
+      const totalReports = reportsByCategory.reduce((sum, cat) => sum + cat.value, 0);
+      
+      const categoryCsv = dataToExport.map(category => [
+        category.name,
+        category.value,
+        `${((category.value / totalReports) * 100).toFixed(2)}%`
+      ]);
+      
+      categoryCsv.unshift(headers);
+      
+      const csvContent = categoryCsv.map(row => 
+        row.map(field => {
+          const stringField = String(field);
+          if (stringField.includes(',') || stringField.includes('"') || stringField.includes('\n')) {
+            return `"${stringField.replace(/"/g, '""')}"`;
+          }
+          return stringField;
+        }).join(',')
+      ).join('\n');
+      
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      
+      const categoryFilter = selectedCategory ? `_${selectedCategory.replace(/\s+/g, '_')}` : '';
+      const filename = `category_distribution${categoryFilter}_${new Date().toISOString().split('T')[0]}.csv`;
+      
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      toast.success("Export successful", {
+        description: `${dataToExport.length} categories exported to CSV`
+      });
+    } catch (error) {
+      console.error("Export error:", error);
+      toast.error("Export failed", {
+        description: "There was an error exporting the category data. Please try again."
+      });
     }
   };
 
@@ -638,6 +786,15 @@ const DashboardContent = () => {
                     >
                       Closed
                     </Toggle>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex items-center gap-1"
+                      onClick={handleExportReportsData}
+                    >
+                      <Download className="h-4 w-4" />
+                      Export
+                    </Button>
                   </div>
                 </div>
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mt-4 gap-2">
@@ -712,18 +869,29 @@ const DashboardContent = () => {
                       Distribution of reports across different categories
                     </CardDescription>
                   </div>
-                  {selectedCategory && (
-                    <Badge 
-                      variant="outline" 
-                      className="bg-blue-50 text-blue-700 hover:bg-blue-100 cursor-pointer"
-                      onClick={() => {
-                        setSelectedCategory(null);
-                        setActiveIndex(undefined);
-                      }}
+                  <div className="flex items-center gap-2">
+                    {selectedCategory && (
+                      <Badge 
+                        variant="outline" 
+                        className="bg-blue-50 text-blue-700 hover:bg-blue-100 cursor-pointer"
+                        onClick={() => {
+                          setSelectedCategory(null);
+                          setActiveIndex(undefined);
+                        }}
+                      >
+                        Filtering by: {selectedCategory} × Clear
+                      </Badge>
+                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex items-center gap-1"
+                      onClick={handleExportCategoryData}
                     >
-                      Filtering by: {selectedCategory} × Clear
-                    </Badge>
-                  )}
+                      <Download className="h-4 w-4" />
+                      Export
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
@@ -927,11 +1095,7 @@ const DashboardContent = () => {
 };
 
 const DashboardView = () => {
-  return (
-    <TimeFilterProvider>
-      <DashboardContent />
-    </TimeFilterProvider>
-  );
+  return <DashboardContent />;
 };
 
 export default DashboardView;
