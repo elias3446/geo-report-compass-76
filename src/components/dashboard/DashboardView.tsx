@@ -1,3 +1,4 @@
+
 import { 
   Card, 
   CardContent, 
@@ -24,7 +25,9 @@ import {
   PieChart, 
   Pie, 
   Cell,
-  Sector
+  Sector,
+  Label,
+  LabelList
 } from "recharts";
 import StatCard from "@/components/ui/StatCard";
 import { 
@@ -66,6 +69,42 @@ interface ReportTimeData {
   closed: number;
   inProgress: number;
 }
+
+// Componente personalizado para renderizar las etiquetas externas del gráfico
+const renderCustomizedLabel = (props: any) => {
+  const { cx, cy, midAngle, innerRadius, outerRadius, percent, index, payload, value, fill } = props;
+  const RADIAN = Math.PI / 180;
+  // Calcula la posición de la etiqueta externa
+  const radius = outerRadius * 1.15;
+  const x = cx + radius * Math.cos(-midAngle * RADIAN);
+  const y = cy + radius * Math.sin(-midAngle * RADIAN);
+  
+  // Ajusta el anclaje del texto basado en la posición
+  const textAnchor = x > cx ? 'start' : 'end';
+
+  return (
+    <g>
+      {/* Línea desde el arco hasta la etiqueta */}
+      <path 
+        d={`M${cx + outerRadius * Math.cos(-midAngle * RADIAN)},${cy + outerRadius * Math.sin(-midAngle * RADIAN)}L${x},${y}`} 
+        stroke={fill} 
+        fill="none" 
+      />
+      {/* Etiqueta con información */}
+      <text 
+        x={x} 
+        y={y} 
+        fill={fill} 
+        textAnchor={textAnchor} 
+        dominantBaseline="middle"
+        style={{ fontSize: '12px', fontWeight: 500 }}
+      >
+        <tspan x={x} dy="0">{payload.name}</tspan>
+        <tspan x={x} dy="15">{value} ({(percent * 100).toFixed(1)}%)</tspan>
+      </text>
+    </g>
+  );
+};
 
 const DashboardContent = () => {
   const { 
@@ -244,9 +283,11 @@ const DashboardContent = () => {
   };
 
   const onPieEnter = (_: any, index: number) => {
+    setActiveIndex(index);
   };
 
   const onPieLeave = () => {
+    setActiveIndex(undefined);
   };
 
   const onPieClick = (_: any, index: number) => {
@@ -400,6 +441,34 @@ const DashboardContent = () => {
       console.error("Export error:", error);
       toast.error("Export failed", {
         description: "There was an error exporting the category data. Please try again."
+      });
+    }
+  };
+
+  // New function to handle exporting location data
+  const handleExportLocationData = () => {
+    try {
+      // Create a custom event to trigger the export in MapView component
+      const exportEvent = new CustomEvent('export-map-data', {
+        detail: {
+          filterType: activeReportTab === 'categories' ? 'category' : 'timeframe',
+          categories: selectedCategories,
+          timeFrame: timeFrame,
+          year: selectedYear,
+          month: selectedMonth,
+          day: selectedDay
+        }
+      });
+      
+      document.dispatchEvent(exportEvent);
+      
+      toast.success('Exportando datos de ubicaciones', {
+        description: `Los datos se están filtrando según: ${activeReportTab === 'categories' ? 'Categorías seleccionadas' : 'Periodo de tiempo seleccionado'}`
+      });
+    } catch (error) {
+      console.error("Export error:", error);
+      toast.error("Export failed", {
+        description: "There was an error triggering the export. Please try again."
       });
     }
   };
@@ -908,16 +977,16 @@ const DashboardContent = () => {
                     </CardDescription>
                   </div>
                   <div className="flex items-center gap-2">
-                    {selectedCategory && (
+                    {selectedCategories.length > 0 && (
                       <Badge 
                         variant="outline" 
-                        className="bg-blue-50 text-blue-700 hover:bg-blue-100 cursor-pointer"
-                        onClick={() => {
-                          setSelectedCategory(null);
-                          setActiveIndex(undefined);
-                        }}
+                        className="bg-blue-50 text-blue-700 hover:bg-blue-100 cursor-pointer flex items-center gap-1"
+                        onClick={clearAllSelectedCategories}
                       >
-                        Filtering by: {selectedCategory} × Clear
+                        <span>
+                          Filtering by: {selectedCategories.join(', ')}
+                        </span>
+                        <X className="h-3.5 w-3.5" />
                       </Badge>
                     )}
                     <Button
@@ -950,6 +1019,8 @@ const DashboardContent = () => {
                         onMouseEnter={onPieEnter}
                         onMouseLeave={onPieLeave}
                         onClick={onPieClick}
+                        label={renderCustomizedLabel}
+                        labelLine={true}
                       >
                         {reportsByCategory.map((entry, index) => (
                           <Cell 
@@ -998,26 +1069,24 @@ const DashboardContent = () => {
                   Geographic distribution of reported issues
                 </CardDescription>
               </div>
-              {selectedCategories.length > 0 && activeReportTab === "categories" && (
-                <div className="flex flex-wrap gap-1">
-                  {selectedCategories.length > 1 
-                    ? <Badge variant="outline" className="bg-blue-50 text-blue-700">
-                        {selectedCategories.length} categories selected
-                      </Badge>
-                    : <Badge variant="outline" className="bg-blue-50 text-blue-700 flex items-center gap-1">
-                        <span>Showing: {selectedCategories[0]}</span>
-                      </Badge>
-                  }
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="h-6 w-6 p-0 hover:bg-transparent"
-                    onClick={clearAllSelectedCategories}
-                  >
-                    <FilterX className="h-4 w-4" />
-                  </Button>
-                </div>
-              )}
+              <div className="flex items-center gap-2">
+                {selectedCategories.length > 0 && activeReportTab === "categories" && (
+                  <Badge variant="outline" className="bg-blue-50 text-blue-700">
+                    {selectedCategories.length > 1 
+                      ? `${selectedCategories.length} categories selected`
+                      : `Showing: ${selectedCategories[0]}`}
+                  </Badge>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-1"
+                  onClick={handleExportLocationData}
+                >
+                  <Download className="h-4 w-4" />
+                  Export Map Data
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent className="p-0">
@@ -1139,7 +1208,11 @@ const DashboardContent = () => {
 };
 
 const DashboardView = () => {
-  return <DashboardContent />;
+  return (
+    <TimeFilterProvider>
+      <DashboardContent />
+    </TimeFilterProvider>
+  );
 };
 
 export default DashboardView;
