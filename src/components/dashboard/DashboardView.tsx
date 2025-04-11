@@ -1005,7 +1005,7 @@ const DashboardContent = () => {
                         {selectedCategories.length} categories selected
                       </Badge>
                     : <Badge variant="outline" className="bg-blue-50 text-blue-700 flex items-center gap-1">
-                        <span>Showing: {selectedCategories[0]}</span>
+                        {selectedCategories[0]}
                       </Badge>
                   }
                   <Button 
