@@ -55,9 +55,11 @@ const MapPage = () => {
                 </Tabs>
               </CardHeader>
               <CardContent className="p-0">
-                <div className="h-[600px]">
-                  <MapView />
-                </div>
+                <MapView 
+                  height="600px" 
+                  filterStatus={activeFilter} 
+                  isStandalone={true} 
+                />
               </CardContent>
             </Card>
           </div>
