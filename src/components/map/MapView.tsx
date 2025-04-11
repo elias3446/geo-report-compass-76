@@ -1,297 +1,356 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useReports, GeoReport } from '@/contexts/ReportContext';
-import { 
-  MapPin, 
-  Navigation, 
-  AlertTriangle, 
-  CheckCircle2, 
-  Clock, 
-  CircleX,
-  FileDown
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { useToast } from '@/components/ui/use-toast';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { useState, useEffect, useMemo } from "react";
+import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
+import L from "leaflet";
+import { getReports } from "@/services/reportService";
+import { useTimeFilter } from "@/context/TimeFilterContext";
+import { toast } from "sonner";
 
-const MapView = () => {
-  const mapContainerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<HTMLDivElement>(null);
-  const { reports } = useReports();
-  const navigate = useNavigate();
-  const { toast } = useToast();
-  const [selectedReport, setSelectedReport] = useState<GeoReport | null>(null);
-  const [mapCenter, setMapCenter] = useState({ x: 50, y: 50 });
-  const [mapZoom, setMapZoom] = useState(1);
-
-  const handlePinClick = (report: GeoReport) => {
-    setSelectedReport(report);
-    toast({
-      title: "Location Selected",
-      description: `Viewing: ${report.title}`,
-      duration: 3000,
+// Create custom marker icons for different report status
+const getReportIcon = (status: string) => {
+  // Define icon configurations based on status
+  if (status === "Open") {
+    return new L.Icon({
+      iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png",
+      shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png",
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+      popupAnchor: [1, -34],
+      shadowSize: [41, 41],
     });
-  };
-
-  const navigateToReport = (id: string) => {
-    navigate(`/reports/${id}`);
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'approved':
-        return <CheckCircle2 className="h-4 w-4 text-geo-green" />;
-      case 'submitted':
-        return <Clock className="h-4 w-4 text-geo-blue" />;
-      case 'rejected':
-        return <CircleX className="h-4 w-4 text-destructive" />;
-      default:
-        return <AlertTriangle className="h-4 w-4 text-amber-500" />;
-    }
-  };
-
-  const handleMapPan = (direction: 'up' | 'down' | 'left' | 'right') => {
-    const panStep = 5;
-    setMapCenter(prev => {
-      const newCenter = { ...prev };
-      
-      switch (direction) {
-        case 'up':
-          newCenter.y = Math.max(newCenter.y - panStep, 0);
-          break;
-        case 'down':
-          newCenter.y = Math.min(newCenter.y + panStep, 100);
-          break;
-        case 'left':
-          newCenter.x = Math.max(newCenter.x - panStep, 0);
-          break;
-        case 'right':
-          newCenter.x = Math.min(newCenter.x - panStep, 100);
-          break;
-      }
-      
-      return newCenter;
+  } else if (status === "In Progress") {
+    return new L.Icon({
+      iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-yellow.png",
+      shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png",
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+      popupAnchor: [1, -34],
+      shadowSize: [41, 41],
     });
-  };
-
-  const handleZoom = (zoomIn: boolean) => {
-    setMapZoom(prev => {
-      if (zoomIn) {
-        return Math.min(prev + 0.2, 3);
-      } else {
-        return Math.max(prev - 0.2, 0.5);
-      }
+  } else {
+    return new L.Icon({
+      iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png",
+      shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png",
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+      popupAnchor: [1, -34],
+      shadowSize: [41, 41],
     });
-  };
+  }
+};
 
+// Mock locations for sample reports
+const sampleLocations: Record<string, [number, number]> = {
+  "Av. Reforma 123": [19.4326, -99.1332],
+  "Calle 16 de Septiembre": [19.4328, -99.1386],
+  "Parque Lincoln": [19.4284, -99.2007],
+  "Bosque de Chapultepec": [19.4120, -99.1946],
+  "Insurgentes Sur": [19.3984, -99.1713],
+  "Centro Histórico": [19.4326, -99.1332],
+  "Paseo de la Reforma": [19.4284, -99.1557],
+  "Polanco": [19.4284, -99.1907],
+  "Condesa": [19.4128, -99.1732],
+  "Roma Norte": [19.4195, -99.1599],
+};
+
+// Default location (Mexico City)
+const defaultCenter: [number, number] = [19.4326, -99.1332];
+
+interface MapViewProps {
+  height?: string;
+  filterStatus?: string;
+  categoryOnly?: boolean;
+  isStandalone?: boolean;
+}
+
+const MapView = ({
+  height = "500px",
+  filterStatus,
+  categoryOnly = false,
+  isStandalone = false
+}: MapViewProps) => {
+  const [reports, setReports] = useState<any[]>([]);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  // Use optional chaining with useTimeFilter to handle cases when TimeFilterProvider is not available
+  const {
+    timeFrame,
+    selectedYear,
+    selectedMonth,
+    selectedDay,
+    showOpenReports,
+    showClosedReports,
+    showInProgressReports,
+    selectedCategory,
+    selectedCategories
+  } = isStandalone ? {
+    timeFrame: undefined,
+    selectedYear: undefined,
+    selectedMonth: undefined,
+    selectedDay: undefined,
+    showOpenReports: true,
+    showClosedReports: true,
+    showInProgressReports: true,
+    selectedCategory: null,
+    selectedCategories: []
+  } : useTimeFilter();
+
+  // Fetch reports data
   useEffect(() => {
-    const handleExportMapData = () => {
-      const data = reports.map(report => ({
-        id: report.id,
-        title: report.title,
-        status: report.status,
-        category: report.category,
-        date: report.date,
-        location: {
-          name: report.location.name,
-          lat: report.location.lat,
-          lng: report.location.lng
-        },
-        tags: report.tags
-      }));
-      
-      const replacer = (key: string, value: any) => value === null ? '' : value;
-      const header = Object.keys(data[0] || {});
-      const csv = [
-        header.join(','),
-        ...data.map(row => header.map(fieldName => {
-          if (fieldName === 'location') {
-            return JSON.stringify(row[fieldName]).replace(/"/g, '""');
-          }
-          if (fieldName === 'tags') {
-            return `"${row[fieldName].join(';')}"`;
-          }
-          return JSON.stringify(row[fieldName], replacer).replace(/"/g, '""');
-        }).join(','))
-      ].join('\r\n');
-      
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.setAttribute('href', url);
-      link.setAttribute('download', `map-data-${new Date().toISOString().slice(0, 10)}.csv`);
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    };
+    const reportData = getReports();
+    setReports(reportData);
+    
+    // Set up polling for real-time updates
+    const intervalId = setInterval(() => {
+      setRefreshKey(prev => prev + 1);
+    }, 5000);
+    
+    return () => clearInterval(intervalId);
+  }, [refreshKey]);
 
-    document.addEventListener('export-map-data', handleExportMapData);
+  // Filter reports based on status filters and time period
+  const filteredReports = useMemo(() => {
+    let filtered = reports;
+    
+    // If this is a standalone map (from the Map page), only apply the filterStatus
+    if (isStandalone) {
+      if (filterStatus) {
+        if (filterStatus === "open") {
+          filtered = filtered.filter(report => report.status === "Open");
+        } else if (filterStatus === "progress") {
+          filtered = filtered.filter(report => report.status === "In Progress");
+        } else if (filterStatus === "resolved") {
+          filtered = filtered.filter(report => report.status === "Resolved");
+        }
+      }
+      return filtered;
+    }
+    
+    // Otherwise apply all filters from TimeFilterContext (for dashboard view)
+    if (!categoryOnly) {
+      if (selectedYear !== undefined) {
+        filtered = filtered.filter(report => {
+          const reportDate = new Date(report.createdAt);
+          return reportDate.getFullYear() === selectedYear;
+        });
+      }
+  
+      if (timeFrame === "month" && selectedMonth !== undefined) {
+        filtered = filtered.filter(report => {
+          const reportDate = new Date(report.createdAt);
+          return reportDate.getMonth() === selectedMonth;
+        });
+      } else if (timeFrame === "week" && selectedMonth !== undefined) {
+        // For week view, we approximate by filtering the current month
+        // and then checking the day within the week
+        filtered = filtered.filter(report => {
+          const reportDate = new Date(report.createdAt);
+          return reportDate.getMonth() === selectedMonth;
+          // A more precise week filter would be implemented here
+        });
+      } else if (timeFrame === "day" && selectedMonth !== undefined && selectedDay !== undefined) {
+        filtered = filtered.filter(report => {
+          const reportDate = new Date(report.createdAt);
+          return reportDate.getMonth() === selectedMonth && 
+                reportDate.getDate() === selectedDay;
+        });
+      }
+    }
+    
+    // Apply multiple category filter if selectedCategories has items
+    if (selectedCategories && selectedCategories.length > 0) {
+      filtered = filtered.filter(report => 
+        selectedCategories.includes(report.category)
+      );
+    } 
+    // Otherwise, apply single category filter if selected and no multi-selection is active
+    else if (selectedCategory && (!selectedCategories || selectedCategories.length === 0)) {
+      filtered = filtered.filter(report => report.category === selectedCategory);
+    }
+    
+    // Then apply status filters if not in categoryOnly mode
+    if (!categoryOnly) {
+      // If a specific filterStatus is provided (from the MapPage), use that
+      if (filterStatus) {
+        if (filterStatus === "open") {
+          filtered = filtered.filter(report => report.status === "Open");
+        } else if (filterStatus === "progress") {
+          filtered = filtered.filter(report => report.status === "In Progress");
+        } else if (filterStatus === "resolved") {
+          filtered = filtered.filter(report => report.status === "Resolved");
+        }
+        // If "all" is selected, keep all reports
+        return filtered;
+      }
+      
+      // Otherwise use the global filter context
+      return filtered.filter(report => {
+        if (report.status === "Open" && showOpenReports) return true;
+        if (report.status === "In Progress" && showInProgressReports) return true;
+        if (report.status === "Resolved" && showClosedReports) return true;
+        return false;
+      });
+    }
+    
+    // When categoryOnly is true, we don't apply status filters
+    return filtered;
+  }, [
+    reports, 
+    showOpenReports, 
+    showClosedReports, 
+    showInProgressReports, 
+    filterStatus, 
+    timeFrame, 
+    selectedYear, 
+    selectedMonth, 
+    selectedDay,
+    selectedCategory,
+    selectedCategories,
+    categoryOnly,
+    isStandalone
+  ]);
+
+  // Get coordinates for each report
+  const getCoordinates = (location: string): [number, number] => {
+    return sampleLocations[location] || defaultCenter;
+  };
+
+  // Export reports to CSV
+  const exportToCSV = () => {
+    if (filteredReports.length === 0) {
+      toast.error("No hay reportes para exportar");
+      return;
+    }
+    
+    // Define CSV headers based on report properties
+    const headers = [
+      "ID", 
+      "Título", 
+      "Descripción", 
+      "Estado", 
+      "Prioridad", 
+      "Categoría", 
+      "Ubicación", 
+      "Fecha de Creación", 
+      "Latitud", 
+      "Longitud"
+    ].join(",");
+    
+    // Convert each report to CSV row
+    const csvRows = filteredReports.map(report => {
+      const coordinates = getCoordinates(report.location);
+      // Check if properties exist before accessing them to avoid undefined errors
+      const safeTitle = report.title ? report.title.replace(/"/g, '""') : "";
+      const safeDescription = report.description ? report.description.replace(/"/g, '""') : "";
+      const safeLocation = report.location ? report.location.replace(/"/g, '""') : "";
+      
+      return [
+        report.id || "",
+        `"${safeTitle}"`,
+        `"${safeDescription}"`,
+        report.status || "",
+        report.priority || "",
+        report.category || "",
+        `"${safeLocation}"`,
+        report.createdAt ? new Date(report.createdAt).toISOString() : "",
+        coordinates[0],
+        coordinates[1]
+      ].join(",");
+    });
+    
+    // Combine headers and rows
+    const csvContent = [headers, ...csvRows].join("\n");
+    
+    // Create download link
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    
+    // Set file name based on current filter
+    let fileName = "todos_los_reportes.csv";
+    if (isStandalone && filterStatus) {
+      if (filterStatus === "open") fileName = "reportes_abiertos.csv";
+      else if (filterStatus === "progress") fileName = "reportes_en_progreso.csv";
+      else if (filterStatus === "resolved") fileName = "reportes_resueltos.csv";
+      else fileName = "todos_los_reportes.csv";
+    } else if (selectedCategory) {
+      fileName = `reportes_${selectedCategory.toLowerCase().replace(/\s+/g, '_')}.csv`;
+    }
+    
+    // Configure link for download
+    link.setAttribute("href", url);
+    link.setAttribute("download", fileName);
+    
+    // Add to document, click to download, then remove
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    // Notify user
+    toast.success(`Exportación completada: ${fileName}`);
+  };
+
+  // Add event listener for export button click
+  useEffect(() => {
+    const handleExportEvent = () => {
+      console.log("Export event triggered, exporting reports:", filteredReports.length);
+      exportToCSV();
+    };
+    
+    document.addEventListener("export-map-data", handleExportEvent);
     
     return () => {
-      document.removeEventListener('export-map-data', handleExportMapData);
+      document.removeEventListener("export-map-data", handleExportEvent);
     };
-  }, [reports]);
+  }, [filteredReports]);
+
+  // Log the filtered reports for debugging
+  useEffect(() => {
+    if (isStandalone) {
+      console.log(`Standalone map showing ${filteredReports.length} reports with filter: ${filterStatus || 'all'}`);
+    } else {
+      console.log(`Dashboard map showing ${filteredReports.length} reports for ${timeFrame} view with year=${selectedYear}, month=${selectedMonth}, day=${selectedDay}`);
+      console.log('Status filters:', { showOpenReports, showInProgressReports, showClosedReports });
+      
+      if (selectedCategories && selectedCategories.length > 0) {
+        console.log(`Multiple categories filter applied: ${selectedCategories.join(', ')}`);
+      } else if (selectedCategory) {
+        console.log(`Category filter applied: ${selectedCategory}`);
+      }
+    }
+  }, [filteredReports, timeFrame, selectedYear, selectedMonth, selectedDay, showOpenReports, showInProgressReports, showClosedReports, selectedCategory, selectedCategories, isStandalone, filterStatus]);
 
   return (
-    <div className="relative w-full h-[600px] overflow-hidden rounded-lg border border-border bg-card">
-      <div className="absolute top-4 right-4 z-10 flex flex-col gap-2">
-        <Button 
-          variant="outline" 
-          size="icon" 
-          onClick={() => handleZoom(true)}
-          className="bg-white hover:bg-slate-50"
-        >
-          <span className="text-xl">+</span>
-        </Button>
-        <Button 
-          variant="outline" 
-          size="icon" 
-          onClick={() => handleZoom(false)}
-          className="bg-white hover:bg-slate-50"
-        >
-          <span className="text-xl">-</span>
-        </Button>
-      </div>
-      
-      <div className="absolute bottom-4 right-4 z-10">
-        <div className="grid grid-cols-3 gap-1">
-          <div />
-          <Button 
-            variant="outline" 
-            size="icon" 
-            onClick={() => handleMapPan('up')}
-            className="bg-white hover:bg-slate-50"
-          >
-            <Navigation className="h-4 w-4 rotate-0" />
-          </Button>
-          <div />
-          <Button 
-            variant="outline" 
-            size="icon" 
-            onClick={() => handleMapPan('left')}
-            className="bg-white hover:bg-slate-50"
-          >
-            <Navigation className="h-4 w-4 -rotate-90" />
-          </Button>
-          <Button 
-            variant="outline" 
-            size="icon" 
-            className="bg-white hover:bg-slate-50 cursor-move"
-          >
-            <span className="h-3 w-3 rounded-full bg-slate-300" />
-          </Button>
-          <Button 
-            variant="outline" 
-            size="icon" 
-            onClick={() => handleMapPan('right')}
-            className="bg-white hover:bg-slate-50"
-          >
-            <Navigation className="h-4 w-4 rotate-90" />
-          </Button>
-          <div />
-          <Button 
-            variant="outline" 
-            size="icon" 
-            onClick={() => handleMapPan('down')}
-            className="bg-white hover:bg-slate-50"
-          >
-            <Navigation className="h-4 w-4 rotate-180" />
-          </Button>
-          <div />
-        </div>
-      </div>
-
-      <div 
-        ref={mapContainerRef} 
-        className="w-full h-full overflow-hidden"
-        style={{
-          backgroundImage: `url('https://images.unsplash.com/photo-1524661135-423995f22d0b?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1740&q=80')`,
-          backgroundSize: `${mapZoom * 100}%`,
-          backgroundPosition: `${mapCenter.x}% ${mapCenter.y}%`,
-          transition: 'background-size 0.3s ease-out, background-position 0.3s ease-out'
-        }}
+    <div style={{ height, width: "100%" }}>
+      <MapContainer 
+        center={defaultCenter}
+        zoom={13}
+        style={{ height: "100%", width: "100%" }}
       >
-        {reports.map(report => {
-          const pinLeft = ((report.location.lng + 180) / 360) * 100;
-          const pinTop = ((90 - report.location.lat) / 180) * 100;
-          
-          return (
-            <TooltipProvider key={report.id}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div 
-                    className={`absolute cursor-pointer transform -translate-x-1/2 -translate-y-1/2 transition-all duration-300 ${
-                      selectedReport?.id === report.id ? 'scale-150 z-50' : 'hover:scale-125 z-40'
-                    }`}
-                    style={{ 
-                      left: `${pinLeft}%`, 
-                      top: `${pinTop}%` 
-                    }}
-                    onClick={() => handlePinClick(report)}
-                  >
-                    <MapPin 
-                      className={`h-6 w-6 ${
-                        report.status === 'approved' ? 'text-geo-green' : 
-                        report.status === 'submitted' ? 'text-geo-blue' : 
-                        report.status === 'rejected' ? 'text-destructive' : 
-                        'text-amber-500'
-                      }`} 
-                      strokeWidth={2.5} 
-                      fill="white" 
-                    />
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <div className="flex items-center gap-2">
-                    {getStatusIcon(report.status)}
-                    <p>{report.title}</p>
-                  </div>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          );
-        })}
+        <TileLayer
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        />
         
-        {selectedReport && (
-          <Card className="absolute left-4 bottom-4 w-72 animate-fade-in z-50">
-            <CardContent className="p-4">
-              <div className="flex items-start justify-between mb-2">
-                <h3 className="font-semibold text-md">{selectedReport.title}</h3>
-                <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-muted text-xs">
-                  {getStatusIcon(selectedReport.status)}
-                  <span className="capitalize">{selectedReport.status}</span>
-                </div>
+        {filteredReports.map((report, index) => (
+          <Marker 
+            key={index}
+            position={getCoordinates(report.location)}
+            icon={getReportIcon(report.status)}
+          >
+            <Popup>
+              <div className="p-1">
+                <h3 className="font-semibold">{report.title}</h3>
+                <p className="text-sm mt-1">Estado: {report.status}</p>
+                <p className="text-sm">Ubicación: {report.location}</p>
+                <p className="text-sm">Categoría: {report.category}</p>
+                <p className="text-sm">Prioridad: {report.priority}</p>
+                <p className="text-sm">Fecha: {new Date(report.createdAt).toLocaleDateString()}</p>
               </div>
-              <p className="text-muted-foreground text-sm mb-2 line-clamp-2">{selectedReport.description}</p>
-              <div className="flex items-center gap-1 text-xs text-muted-foreground mb-2">
-                <MapPin className="h-3 w-3" />
-                <span>{selectedReport.location.name}</span>
-              </div>
-              <div className="flex flex-wrap gap-1 mb-2">
-                {selectedReport.tags.map(tag => (
-                  <span key={tag} className="bg-geo-blue-light text-geo-blue-dark text-xs px-2 py-0.5 rounded-full">
-                    {tag}
-                  </span>
-                ))}
-              </div>
-              <Button 
-                size="sm" 
-                className="w-full"
-                onClick={() => navigateToReport(selectedReport.id)}
-              >
-                View Full Report
-              </Button>
-            </CardContent>
-          </Card>
-        )}
-      </div>
+            </Popup>
+          </Marker>
+        ))}
+      </MapContainer>
     </div>
   );
 };

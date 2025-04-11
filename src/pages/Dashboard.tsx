@@ -264,7 +264,7 @@ const Dashboard = () => {
                   <Tooltip />
                   <Bar 
                     dataKey="count" 
-                    fill={data => selectedCategories.includes(data.category) ? "#1E40AF" : "#2196F3"} 
+                    fill={(data) => selectedCategories.includes(data.category) ? "#1E40AF" : "#2196F3"} 
                     radius={[0, 4, 4, 0]} 
                     barSize={20}
                     onClick={(data) => handleCategoryClick(data.category)}
