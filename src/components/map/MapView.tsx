@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useMemo } from "react";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
@@ -73,7 +72,7 @@ const MapView = ({
   const [reports, setReports] = useState<any[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  // Only use TimeFilterContext if this is not a standalone map (i.e., it's part of dashboard)
+  // Use optional chaining with useTimeFilter to handle cases when TimeFilterProvider is not available
   const {
     timeFrame,
     selectedYear,
@@ -82,8 +81,19 @@ const MapView = ({
     showOpenReports,
     showClosedReports,
     showInProgressReports,
-    selectedCategory
-  } = useTimeFilter();
+    selectedCategory,
+    selectedCategories
+  } = isStandalone ? {
+    timeFrame: undefined,
+    selectedYear: undefined,
+    selectedMonth: undefined,
+    selectedDay: undefined,
+    showOpenReports: true,
+    showClosedReports: true,
+    showInProgressReports: true,
+    selectedCategory: null,
+    selectedCategories: []
+  } : useTimeFilter();
 
   // Fetch reports data
   useEffect(() => {
@@ -147,8 +157,14 @@ const MapView = ({
       }
     }
     
-    // Always apply category filter if selected, regardless of categoryOnly mode
-    if (selectedCategory) {
+    // Apply multiple category filter if selectedCategories has items
+    if (selectedCategories && selectedCategories.length > 0) {
+      filtered = filtered.filter(report => 
+        selectedCategories.includes(report.category)
+      );
+    } 
+    // Otherwise, apply single category filter if selected and no multi-selection is active
+    else if (selectedCategory && (!selectedCategories || selectedCategories.length === 0)) {
       filtered = filtered.filter(report => report.category === selectedCategory);
     }
     
@@ -189,6 +205,7 @@ const MapView = ({
     selectedMonth, 
     selectedDay,
     selectedCategory,
+    selectedCategories,
     categoryOnly,
     isStandalone
   ]);
@@ -294,18 +311,21 @@ const MapView = ({
     } else {
       console.log(`Dashboard map showing ${filteredReports.length} reports for ${timeFrame} view with year=${selectedYear}, month=${selectedMonth}, day=${selectedDay}`);
       console.log('Status filters:', { showOpenReports, showInProgressReports, showClosedReports });
-      if (selectedCategory) {
+      
+      if (selectedCategories && selectedCategories.length > 0) {
+        console.log(`Multiple categories filter applied: ${selectedCategories.join(', ')}`);
+      } else if (selectedCategory) {
         console.log(`Category filter applied: ${selectedCategory}`);
       }
     }
-  }, [filteredReports, timeFrame, selectedYear, selectedMonth, selectedDay, showOpenReports, showInProgressReports, showClosedReports, selectedCategory, isStandalone, filterStatus]);
+  }, [filteredReports, timeFrame, selectedYear, selectedMonth, selectedDay, showOpenReports, showInProgressReports, showClosedReports, selectedCategory, selectedCategories, isStandalone, filterStatus]);
 
   return (
     <div style={{ height, width: "100%" }}>
       <MapContainer 
-        style={{ height: "100%", width: "100%" }}
         center={defaultCenter}
         zoom={13}
+        style={{ height: "100%", width: "100%" }}
       >
         <TileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

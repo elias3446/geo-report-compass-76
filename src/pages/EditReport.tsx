@@ -6,6 +6,7 @@ import ReportForm from "@/components/reports/ReportForm";
 import { getReports } from "@/services/reportService";
 import { AlertCircle, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { TimeFilterProvider } from "@/context/TimeFilterContext";
 
 const EditReport = () => {
   const { id } = useParams();
@@ -70,7 +71,9 @@ const EditReport = () => {
           Update the details of this report
         </p>
       </div>
-      <ReportForm isEditing={true} initialData={report} />
+      <TimeFilterProvider>
+        <ReportForm isEditing={true} initialData={report} />
+      </TimeFilterProvider>
     </AppLayout>
   );
 };

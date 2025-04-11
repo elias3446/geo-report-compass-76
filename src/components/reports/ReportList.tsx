@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { 
@@ -18,26 +17,23 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useTimeFilter } from "@/context/TimeFilterContext";
 import { 
   ChevronDown, 
   Filter, 
   PlusCircle, 
   Search,
   ArrowUpDown,
-  Calendar,
-  MapPin,
-  Tag,
-  AlarmClock,
-  CheckCircle,
-  Download
+  Download,
+  X
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { getReports, Report } from "@/services/reportService";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -53,6 +49,7 @@ const ReportList = () => {
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [sortConfig, setSortConfig] = useState<SortConfig>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const { selectedCategories, toggleCategory } = useTimeFilter();
   
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -65,6 +62,13 @@ const ReportList = () => {
     // Apply status filter if selected
     if (statusFilter) {
       filteredReports = filteredReports.filter(report => report.status === statusFilter);
+    }
+    
+    // Apply category filters if selected
+    if (selectedCategories && selectedCategories.length > 0) {
+      filteredReports = filteredReports.filter(report => 
+        selectedCategories.includes(report.category)
+      );
     }
     
     // Apply free text search across all fields
@@ -122,7 +126,7 @@ const ReportList = () => {
     }
     
     setReports(filteredReports);
-  }, [refreshKey, statusFilter, searchQuery, sortConfig]);
+  }, [refreshKey, statusFilter, searchQuery, sortConfig, selectedCategories]);
 
   const refreshReports = () => {
     setRefreshKey(prevKey => prevKey + 1);
@@ -160,6 +164,10 @@ const ReportList = () => {
     setSearchQuery("");
     setStatusFilter(null);
     setSortConfig(null);
+    if (selectedCategories && selectedCategories.length > 0) {
+      // Clear all selected categories
+      selectedCategories.forEach(category => toggleCategory(category));
+    }
     toast("All filters cleared");
   };
 
@@ -413,6 +421,19 @@ const ReportList = () => {
                 </Button>
               </Badge>
             )}
+            {selectedCategories?.map(category => (
+              <Badge key={category} variant="secondary" className="flex items-center gap-1">
+                Category: {category}
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-4 w-4 p-0 hover:bg-transparent"
+                  onClick={() => toggleCategory(category)}
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </Badge>
+            ))}
             {sortConfig && (
               <Badge variant="secondary" className="flex items-center gap-1">
                 Sorted by: {sortConfig.key} ({sortConfig.direction})

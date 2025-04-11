@@ -8,7 +8,8 @@ import {
   AlertTriangle, 
   CheckCircle2, 
   Clock, 
-  CircleX
+  CircleX,
+  FileDown
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -30,7 +31,6 @@ const MapView = () => {
   const [mapCenter, setMapCenter] = useState({ x: 50, y: 50 });
   const [mapZoom, setMapZoom] = useState(1);
 
-  // Mock map interactions
   const handlePinClick = (report: GeoReport) => {
     setSelectedReport(report);
     toast({
@@ -57,7 +57,6 @@ const MapView = () => {
     }
   };
 
-  // Handle map panning
   const handleMapPan = (direction: 'up' | 'down' | 'left' | 'right') => {
     const panStep = 5;
     setMapCenter(prev => {
@@ -82,7 +81,6 @@ const MapView = () => {
     });
   };
 
-  // Handle zoom
   const handleZoom = (zoomIn: boolean) => {
     setMapZoom(prev => {
       if (zoomIn) {
@@ -93,9 +91,57 @@ const MapView = () => {
     });
   };
 
+  useEffect(() => {
+    const handleExportMapData = () => {
+      const data = reports.map(report => ({
+        id: report.id,
+        title: report.title,
+        status: report.status,
+        category: report.category,
+        date: report.date,
+        location: {
+          name: report.location.name,
+          lat: report.location.lat,
+          lng: report.location.lng
+        },
+        tags: report.tags
+      }));
+      
+      const replacer = (key: string, value: any) => value === null ? '' : value;
+      const header = Object.keys(data[0] || {});
+      const csv = [
+        header.join(','),
+        ...data.map(row => header.map(fieldName => {
+          if (fieldName === 'location') {
+            return JSON.stringify(row[fieldName]).replace(/"/g, '""');
+          }
+          if (fieldName === 'tags') {
+            return `"${row[fieldName].join(';')}"`;
+          }
+          return JSON.stringify(row[fieldName], replacer).replace(/"/g, '""');
+        }).join(','))
+      ].join('\r\n');
+      
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `map-data-${new Date().toISOString().slice(0, 10)}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    };
+
+    document.addEventListener('export-map-data', handleExportMapData);
+    
+    return () => {
+      document.removeEventListener('export-map-data', handleExportMapData);
+    };
+  }, [reports]);
+
   return (
     <div className="relative w-full h-[600px] overflow-hidden rounded-lg border border-border bg-card">
-      {/* Map controls */}
       <div className="absolute top-4 right-4 z-10 flex flex-col gap-2">
         <Button 
           variant="outline" 
@@ -163,7 +209,6 @@ const MapView = () => {
         </div>
       </div>
 
-      {/* Map container */}
       <div 
         ref={mapContainerRef} 
         className="w-full h-full overflow-hidden"
@@ -174,10 +219,7 @@ const MapView = () => {
           transition: 'background-size 0.3s ease-out, background-position 0.3s ease-out'
         }}
       >
-        {/* Map pins */}
         {reports.map(report => {
-          // Calculate pin position based on report lat/lng
-          // This is a mock calculation for demonstration purposes
           const pinLeft = ((report.location.lng + 180) / 360) * 100;
           const pinTop = ((90 - report.location.lat) / 180) * 100;
           
@@ -218,7 +260,6 @@ const MapView = () => {
           );
         })}
         
-        {/* Pin Info Card */}
         {selectedReport && (
           <Card className="absolute left-4 bottom-4 w-72 animate-fade-in z-50">
             <CardContent className="p-4">

@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import AppLayout from "@/components/layout/AppLayout";
 import ReportList from "@/components/reports/ReportList";
+import { TimeFilterProvider } from "@/context/TimeFilterContext";
 
 const Reports = () => {
   const [key, setKey] = useState(0);
@@ -19,7 +20,9 @@ const Reports = () => {
           View and manage all submitted reports
         </p>
       </div>
-      <ReportList key={key} />
+      <TimeFilterProvider>
+        <ReportList key={key} />
+      </TimeFilterProvider>
     </AppLayout>
   );
 };

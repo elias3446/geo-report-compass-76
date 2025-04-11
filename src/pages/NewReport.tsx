@@ -1,6 +1,7 @@
 
 import AppLayout from "@/components/layout/AppLayout";
 import ReportForm from "@/components/reports/ReportForm";
+import { TimeFilterProvider } from "@/context/TimeFilterContext";
 
 const NewReport = () => {
   return (
@@ -11,7 +12,9 @@ const NewReport = () => {
           Submit a new issue or problem that needs attention
         </p>
       </div>
-      <ReportForm />
+      <TimeFilterProvider>
+        <ReportForm />
+      </TimeFilterProvider>
     </AppLayout>
   );
 };

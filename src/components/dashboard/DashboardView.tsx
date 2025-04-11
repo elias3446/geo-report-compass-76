@@ -1,3 +1,4 @@
+
 import { 
   Card, 
   CardContent, 
@@ -113,25 +114,7 @@ const DashboardContent = () => {
     "January", "February", "March", "April", "May", "June", 
     "July", "August", "September", "October", "November", "December"
   ];
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (activeReportTab === "categories" && 
-          pieChartRef.current && 
-          !pieChartRef.current.contains(event.target as Node) && 
-          selectedCategory) {
-        setSelectedCategory(null);
-        setActiveIndex(undefined);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [pieChartRef, selectedCategory, activeReportTab, setSelectedCategory]);
-
+  
   useEffect(() => {
     if (activeReportTab === "reports") {
       setSelectedCategory(null);
@@ -163,60 +146,76 @@ const DashboardContent = () => {
     }
   };
 
+  // Nuevo renderizado para el donut chart
   const renderActiveShape = (props: any) => {
-    const RADIAN = Math.PI / 180;
-    const { cx, cy, midAngle, innerRadius, outerRadius, startAngle, endAngle, fill, payload, percent, value } = props;
-    const sin = Math.sin(-RADIAN * midAngle);
-    const cos = Math.cos(-RADIAN * midAngle);
-    const sx = cx + (outerRadius + 10) * cos;
-    const sy = cy + (outerRadius + 10) * sin;
-    const mx = cx + (outerRadius + 30) * cos;
-    const my = cy + (outerRadius + 30) * sin;
-    const ex = mx + (cos >= 0 ? 1 : -1) * 22;
-    const ey = my;
-    const textAnchor = cos >= 0 ? 'start' : 'end';
-
+    const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill, payload, percent, value } = props;
+    
     return (
       <g>
-        <text x={cx} y={cy} dy={8} textAnchor="middle" fill={fill} className="text-sm font-medium">
-          {payload.name}
-        </text>
+        {/* Sector activo aumentado de tamaño para resaltar */}
         <Sector
           cx={cx}
           cy={cy}
           innerRadius={innerRadius}
-          outerRadius={outerRadius}
+          outerRadius={outerRadius + 10} // Aumentamos el radio exterior para resaltar
           startAngle={startAngle}
           endAngle={endAngle}
           fill={fill}
+          className="filter drop-shadow-lg"
         />
+        
+        {/* Efecto de brillo alrededor del sector seleccionado */}
         <Sector
           cx={cx}
           cy={cy}
+          innerRadius={innerRadius - 4}
+          outerRadius={outerRadius + 4}
           startAngle={startAngle}
           endAngle={endAngle}
-          innerRadius={outerRadius + 6}
-          outerRadius={outerRadius + 10}
-          fill={fill}
+          fill="none"
+          stroke={fill}
+          strokeWidth={2}
+          strokeOpacity={0.7}
         />
-        <path d={`M${sx},${sy}L${mx},${my}L${ex},${ey}`} stroke={fill} fill="none" />
-        <circle cx={ex} cy={ey} r={2} fill={fill} stroke="none" />
-        <text x={ex + (cos >= 0 ? 1 : -1) * 12} y={ey} textAnchor={textAnchor} fill="#333" className="text-xs">{`${value} reports`}</text>
-        <text x={ex + (cos >= 0 ? 1 : -1) * 12} y={ey} dy={18} textAnchor={textAnchor} fill="#999" className="text-xs">
-          {`(${(percent * 100).toFixed(2)}%)`}
-        </text>
       </g>
+    );
+  };
+
+  // Texto central del donut chart que muestra la categoría seleccionada
+  const renderCenterLabel = () => {
+    if (activeIndex === undefined || !reportsByCategory[activeIndex]) {
+      return (
+        <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" className="text-base font-medium">
+          <tspan x="50%" dy="-10">Categorías</tspan>
+          <tspan x="50%" dy="25" className="text-sm text-muted-foreground">Seleccione una</tspan>
+        </text>
+      );
+    }
+
+    const category = reportsByCategory[activeIndex];
+    const categoryColor = COLORS[activeIndex % COLORS.length];
+    
+    return (
+      <>
+        <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" className="text-base font-medium" fill={categoryColor}>
+          <tspan x="50%" dy="-10">{category.name}</tspan>
+          <tspan x="50%" dy="25" className="text-sm">{category.value} reportes</tspan>
+          <tspan x="50%" dy="20" className="text-xs text-muted-foreground">({(category.value / reportsByCategory.reduce((sum, cat) => sum + cat.value, 0) * 100).toFixed(1)}%)</tspan>
+        </text>
+      </>
     );
   };
 
   const onPieEnter = (_: any, index: number) => {
     setActiveIndex(index);
+    if (reportsByCategory[index]) {
+      setSelectedCategory(reportsByCategory[index].name);
+    }
   };
 
   const onPieLeave = () => {
-    if (!selectedCategory) {
-      setActiveIndex(undefined);
-    }
+    // No vaciamos el índice activo para mantener la selección
+    // setActiveIndex(undefined);
   };
 
   const onPieClick = (_: any, index: number) => {
@@ -898,17 +897,18 @@ const DashboardContent = () => {
                 <div className="h-80" ref={pieChartRef}>
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
+                      {/* Donut chart con centro hueco */}
                       <Pie
-                        activeIndex={activeIndex}
-                        activeShape={renderActiveShape}
                         data={reportsByCategory}
                         cx="50%"
                         cy="50%"
-                        labelLine={false}
-                        label={({ name, percent }) => activeIndex !== undefined ? '' : `${name}: ${(percent * 100).toFixed(0)}%`}
-                        outerRadius={80}
+                        innerRadius={70}  // Añade un radio interior para crear el agujero
+                        outerRadius={100} // Radio exterior de la dona
                         fill="#8884d8"
+                        paddingAngle={2}  // Separación entre segmentos
                         dataKey="value"
+                        activeIndex={activeIndex}
+                        activeShape={renderActiveShape}
                         onMouseEnter={onPieEnter}
                         onMouseLeave={onPieLeave}
                         onClick={onPieClick}
@@ -918,16 +918,19 @@ const DashboardContent = () => {
                             key={`cell-${index}`} 
                             fill={COLORS[index % COLORS.length]} 
                             style={{ cursor: 'pointer' }}
+                            className="transition-all duration-200 hover:opacity-90"
                           />
                         ))}
                       </Pie>
                       <Tooltip />
+                      {/* Texto central con la categoría seleccionada */}
+                      {renderCenterLabel()}
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
                 <div className="mt-4 text-center text-sm">
                   <p className="text-muted-foreground mb-2">
-                    Click on a category to filter the map view
+                    Mouse over a category to apply filter
                   </p>
                   {selectedCategory && (
                     <Button 

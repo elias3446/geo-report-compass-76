@@ -6,6 +6,7 @@ import ReportForm from '@/components/ReportForm';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { TimeFilterProvider } from "@/context/TimeFilterContext";
 
 const ReportFormPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -39,7 +40,9 @@ const ReportFormPage = () => {
       </div>
       
       <div className="bg-card rounded-lg border p-6">
-        <ReportForm />
+        <TimeFilterProvider>
+          <ReportForm />
+        </TimeFilterProvider>
       </div>
     </div>
   );
