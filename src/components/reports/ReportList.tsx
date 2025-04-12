@@ -56,6 +56,8 @@ const ReportList = () => {
   const { selectedCategories, toggleCategory } = useTimeFilter();
   
   const [refreshKey, setRefreshKey] = useState(0);
+  const [selectedFilter, setSelectedFilter] = useState<string>("");
+  const [filterValue, setFilterValue] = useState<string>("");
 
   useEffect(() => {
     setStatusFilter(statusFromUrl);
@@ -103,6 +105,22 @@ const ReportList = () => {
       });
     }
     
+    // Apply specific filter if both filter type and value are selected
+    if (selectedFilter && filterValue) {
+      filteredReports = filteredReports.filter(report => {
+        const value = report[selectedFilter as keyof Report];
+        if (typeof value === 'string') {
+          return value.toLowerCase().includes(filterValue.toLowerCase());
+        } else if (selectedFilter === 'createdAt') {
+          // Fix TypeScript error by properly type checking
+          const dateValue = value as unknown as string;
+          const reportDateStr = new Date(dateValue).toLocaleDateString('es-MX');
+          return reportDateStr.includes(filterValue);
+        }
+        return false;
+      });
+    }
+    
     if (sortConfig) {
       filteredReports.sort((a, b) => {
         if (a[sortConfig.key] < b[sortConfig.key]) {
@@ -116,7 +134,7 @@ const ReportList = () => {
     }
     
     setReports(filteredReports);
-  }, [refreshKey, statusFilter, searchQuery, sortConfig, selectedCategories]);
+  }, [refreshKey, statusFilter, searchQuery, sortConfig, selectedCategories, selectedFilter, filterValue]);
 
   const refreshReports = () => {
     setRefreshKey(prevKey => prevKey + 1);
@@ -154,6 +172,8 @@ const ReportList = () => {
     }
     
     setSortConfig({ key, direction });
+    setSelectedFilter(key);
+    setFilterValue("");
     toast(`Sorted by ${key} ${direction === 'asc' ? 'ascending' : 'descending'}`);
   };
 
@@ -162,10 +182,40 @@ const ReportList = () => {
     setStatusFilter(null);
     setSortConfig(null);
     setSearchParams({});
+    setSelectedFilter("");
+    setFilterValue("");
     if (selectedCategories && selectedCategories.length > 0) {
       selectedCategories.forEach(category => toggleCategory(category));
     }
     toast("All filters cleared");
+  };
+
+  // Get unique filter values for the selected filter type
+  const getFilterOptions = () => {
+    if (!selectedFilter) return [];
+    
+    const uniqueValues = new Set<string>();
+    
+    allReports.forEach(report => {
+      const value = report[selectedFilter as keyof Report];
+      if (typeof value === 'string') {
+        uniqueValues.add(value);
+      } else if (selectedFilter === 'createdAt') {
+        // Fix TypeScript error by properly type checking
+        const dateValue = value as unknown as string;
+        const dateStr = new Date(dateValue).toLocaleDateString('es-MX');
+        uniqueValues.add(dateStr);
+      }
+    });
+    
+    return Array.from(uniqueValues).sort();
+  };
+
+  const filterOptions = getFilterOptions();
+
+  const handleFilterChange = (value: string) => {
+    setFilterValue(value);
+    toast(`Filtered by ${selectedFilter}: ${value}`);
   };
 
   const getStatusColor = (status: string) => {
@@ -363,6 +413,24 @@ const ReportList = () => {
               </SelectContent>
             </Select>
             
+            {selectedFilter && (
+              <Select 
+                onValueChange={handleFilterChange}
+                value={filterValue}
+              >
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder={`Filter by ${selectedFilter}...`} />
+                </SelectTrigger>
+                <SelectContent>
+                  {filterOptions.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {option}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            
             <Button 
               variant="outline" 
               size="sm" 
@@ -414,6 +482,19 @@ const ReportList = () => {
                 </Button>
               </Badge>
             ))}
+            {selectedFilter && filterValue && (
+              <Badge variant="secondary" className="flex items-center gap-1">
+                {selectedFilter}: {filterValue}
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-4 w-4 p-0 hover:bg-transparent"
+                  onClick={() => setFilterValue("")}
+                >
+                  &times;
+                </Button>
+              </Badge>
+            )}
             {sortConfig && (
               <Badge variant="secondary" className="flex items-center gap-1">
                 Sorted by: {sortConfig.key} ({sortConfig.direction})

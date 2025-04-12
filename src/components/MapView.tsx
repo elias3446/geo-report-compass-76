@@ -21,8 +21,19 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Skeleton } from '@/components/ui/skeleton';
+import { useIsMobile } from '@/hooks/use-mobile';
 
-const MapView = () => {
+const MapView = ({ 
+  height = "600px",
+  filterStatus,
+  categoryOnly,
+  isStandalone = false 
+}: { 
+  height?: string;
+  filterStatus?: string;
+  categoryOnly?: boolean;
+  isStandalone?: boolean;
+}) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<HTMLDivElement>(null);
   const { reports } = useReports();
@@ -32,6 +43,7 @@ const MapView = () => {
   const [mapCenter, setMapCenter] = useState({ x: 50, y: 50 });
   const [mapZoom, setMapZoom] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
+  const isMobile = useIsMobile();
 
   // Simulate loading
   useEffect(() => {
@@ -157,7 +169,7 @@ const MapView = () => {
 
   if (isLoading) {
     return (
-      <div className="relative w-full h-[600px] overflow-hidden rounded-lg border border-border bg-card p-4">
+      <div className={`relative w-full overflow-hidden rounded-lg border border-border bg-card p-4`} style={{ height }}>
         <Skeleton className="absolute top-4 right-4 h-8 w-32" />
         <Skeleton className="absolute bottom-4 right-4 h-32 w-32" />
         <Skeleton className="w-full h-full" />
@@ -165,8 +177,11 @@ const MapView = () => {
     );
   }
 
+  const containerHeight = height === "100%" ? "h-full" : `h-[${height}]`;
+  const minHeight = isMobile ? "min-h-[400px]" : "";
+
   return (
-    <div className="relative w-full h-[600px] overflow-hidden rounded-lg border border-border bg-card">
+    <div className={`relative w-full overflow-hidden rounded-lg border border-border bg-card ${minHeight}`} style={{ height }}>
       <div className="absolute top-4 right-4 z-10 flex flex-col gap-2">
         <Button 
           variant="outline" 

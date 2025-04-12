@@ -1,3 +1,4 @@
+
 import { 
   Card, 
   CardContent, 
@@ -6,99 +7,18 @@ import {
   CardTitle 
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-import { Toggle } from "@/components/ui/toggle";
-import { Link } from "react-router-dom";
-import { 
-  BarChart, 
-  Bar, 
-  LineChart, 
-  Line, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  Legend, 
-  ResponsiveContainer, 
-  PieChart, 
-  Pie, 
-  Cell,
-  Sector,
-  Label,
-  LabelList
-} from "recharts";
-import StatCard from "@/components/ui/StatCard";
-import { 
-  AlertCircle, 
-  CheckCircle2, 
-  Clock, 
-  FileText, 
-  MapPin, 
-  Users,
-  CalendarIcon,
-  Edit,
-  Eye,
-  FilterX,
-  Download,
-  X,
-  ChevronRight
-} from "lucide-react";
-import MapView from "@/components/map/MapView";
-import { useEffect, useState, useMemo, useRef } from "react";
-import { getReports, getReportsStats, getReportLocationHotspots, getAllActivities, Activity } from "@/services/reportService";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { TimeFilterProvider, useTimeFilter } from "@/context/TimeFilterContext";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { toast } from "sonner";
-import { useReports } from "@/contexts/ReportContext";
 import { useNavigate } from "react-router-dom";
-
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658'];
-
-interface ReportTimeData {
-  name: string;
-  open: number;
-  closed: number;
-  inProgress: number;
-}
-
-const renderCustomizedLabel = (props: any) => {
-  const { cx, cy, midAngle, innerRadius, outerRadius, percent, index, payload, value, fill } = props;
-  const RADIAN = Math.PI / 180;
-  const radius = outerRadius * 1.15;
-  const x = cx + radius * Math.cos(-midAngle * RADIAN);
-  const y = cy + radius * Math.sin(-midAngle * RADIAN);
-  const textAnchor = x > cx ? 'start' : 'end';
-  return (
-    <g>
-      <path 
-        d={`M${cx + outerRadius * Math.cos(-midAngle * RADIAN)},${cy + outerRadius * Math.sin(-midAngle * RADIAN)}L${x},${y}`} 
-        stroke={fill} 
-        fill="none" 
-      />
-      <text 
-        x={x} 
-        y={y} 
-        fill={fill} 
-        textAnchor={textAnchor} 
-        dominantBaseline="middle"
-        style={{ fontSize: '12px', fontWeight: 500 }}
-      >
-        <tspan x={x} dy="0">{payload.name}</tspan>
-        <tspan x={x} dy="15">{value} ({(percent * 100).toFixed(1)}%)</tspan>
-      </text>
-    </g>
-  );
-};
+import StatCard from "@/components/ui/StatCard";
+import { FileText, CheckCircle2, Clock, AlertCircle } from "lucide-react";
+import { useTimeFilter } from "@/context/TimeFilterContext";
+import { useReports } from "@/contexts/ReportContext";
+import { useDashboardData } from "@/hooks/useDashboardData";
+import ReportsOverview from "./ReportsOverview";
+import CategoryDistribution from "./CategoryDistribution";
+import MapSection from "./MapSection";
+import ActivityList from "./ActivityList";
+import LocationList from "./LocationList";
+import { getAllActivities } from "@/services/reportService";
 
 const DashboardContent = () => {
   const { 
@@ -109,7 +29,6 @@ const DashboardContent = () => {
     showOpenReports,
     showClosedReports,
     showInProgressReports,
-    selectedCategory,
     selectedCategories,
     setTimeFrame,
     setSelectedYear,
@@ -117,705 +36,31 @@ const DashboardContent = () => {
     setSelectedDay,
     setShowOpenReports,
     setShowClosedReports,
-    setShowInProgressReports,
-    setSelectedCategory,
-    setSelectedCategories,
-    toggleCategory
+    setShowInProgressReports
   } = useTimeFilter();
   
-  const [stats, setStats] = useState({
-    totalReports: 0,
-    openIssues: 0,
-    resolvedIssues: 0,
-    averageResponse: "0 days"
-  });
-  
-  const [reportsByCategory, setReportsByCategory] = useState([]);
-  const [reportsByTimeFrame, setReportsByTimeFrame] = useState<ReportTimeData[]>([]);
-  const [recentActivities, setRecentActivities] = useState<Activity[]>([]);
-  const [locationHotspots, setLocationHotspots] = useState([]);
-  
-  const [allReports, setAllReports] = useState<any[]>([]);
-  
-  const [availableYears, setAvailableYears] = useState<number[]>([]);
-  const [daysInMonth, setDaysInMonth] = useState<number[]>([]);
-  
-  const [refreshKey, setRefreshKey] = useState(0);
-  const [activeIndex, setActiveIndex] = useState<number | undefined>(undefined);
-  
-  const [activeReportTab, setActiveReportTab] = useState("reports");
-  
-  const pieChartRef = useRef<HTMLDivElement | null>(null);
-
-  const months = [
-    "January", "February", "March", "April", "May", "June", 
-    "July", "August", "September", "October", "November", "December"
-  ];
-  
   const navigate = useNavigate();
-
-  useEffect(() => {
-    if (activeReportTab === "reports") {
-      setSelectedCategory(null);
-      setSelectedCategories([]);
-      setActiveIndex(undefined);
-    } else if (activeReportTab === "categories") {
-      setShowOpenReports(true);
-      setShowClosedReports(true);
-      setShowInProgressReports(true);
-    }
-  }, [activeReportTab, setSelectedCategory, setShowOpenReports, setShowClosedReports, setShowInProgressReports, setSelectedCategories]);
-
-  const getActiveIndices = () => {
-    if (!selectedCategories.length) return [];
-    
-    return reportsByCategory
-      .map((cat, index) => ({ index, name: cat.name }))
-      .filter(item => selectedCategories.includes(item.name))
-      .map(item => item.index);
-  };
-
-  const getSelectedCategoryReports = () => {
-    if (selectedCategories.length === 0) return allReports;
-    
-    return allReports.filter(report => 
-      selectedCategories.includes(report.category)
-    );
-  };
-
-  const getMonthShortName = (monthIndex: number): string => {
-    return ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][monthIndex];
-  };
-
-  const getTimeFrameFormat = (date: Date, timeFrame: string): string => {
-    const d = new Date(date);
-    switch(timeFrame) {
-      case "day":
-        return `${d.getHours()}:00`;
-      case "week":
-        return ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][d.getDay()];
-      case "month":
-        return d.getDate().toString();
-      case "year":
-        return getMonthShortName(d.getMonth());
-      default:
-        return d.toLocaleDateString();
-    }
-  };
-
-  const renderActiveShape = (props: any) => {
-    const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill, payload, percent, value } = props;
-    
-    return (
-      <g>
-        <Sector
-          cx={cx}
-          cy={cy}
-          innerRadius={innerRadius}
-          outerRadius={outerRadius + 10}
-          startAngle={startAngle}
-          endAngle={endAngle}
-          fill={fill}
-          className="filter drop-shadow-lg"
-        />
-        
-        <Sector
-          cx={cx}
-          cy={cy}
-          innerRadius={innerRadius - 4}
-          outerRadius={outerRadius + 4}
-          startAngle={startAngle}
-          endAngle={endAngle}
-          fill="none"
-          stroke={fill}
-          strokeWidth={2}
-          strokeOpacity={0.7}
-        />
-      </g>
-    );
-  };
-
-  const renderCenterLabel = () => {
-    const activeIndices = getActiveIndices();
-    const totalCount = reportsByCategory.reduce((sum, cat) => sum + cat.value, 0);
-    
-    if (activeIndices.length === 0) {
-      return (
-        <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" className="text-base font-medium">
-          <tspan x="50%" dy="-10">Categorías</tspan>
-          <tspan x="50%" dy="25" className="text-sm text-muted-foreground">Seleccione una o más</tspan>
-        </text>
-      );
-    }
-    
-    if (activeIndices.length === 1) {
-      const category = reportsByCategory[activeIndices[0]];
-      const categoryColor = COLORS[activeIndices[0] % COLORS.length];
-      
-      return (
-        <>
-          <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" className="text-base font-medium" fill={categoryColor}>
-            <tspan x="50%" dy="-20">{category.name}</tspan>
-            <tspan x="50%" dy="25" className="text-sm">{category.value} reportes</tspan>
-            <tspan x="50%" dy="20" className="text-xs text-muted-foreground">({(category.value / totalCount * 100).toFixed(1)}%)</tspan>
-          </text>
-        </>
-      );
-    }
-    
-    const selectedCats = activeIndices.map(idx => reportsByCategory[idx]);
-    const totalSelected = selectedCats.reduce((sum, cat) => sum + cat.value, 0);
-    const percentOfAll = (totalSelected / totalCount * 100).toFixed(1);
-    
-    return (
-      <>
-        <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" className="text-base font-medium">
-          <tspan x="50%" dy="-30" className="font-bold">{selectedCats.length} categorías</tspan>
-          <tspan x="50%" dy="25" className="text-sm">{totalSelected} reportes</tspan>
-          <tspan x="50%" dy="20" className="text-xs text-muted-foreground">({percentOfAll}% del total)</tspan>
-        </text>
-      </>
-    );
-  };
-
-  const onPieEnter = (_: any, index: number) => {
-    setActiveIndex(index);
-  };
-
-  const onPieLeave = () => {
-    setActiveIndex(undefined);
-  };
-
-  const onPieClick = (_: any, index: number) => {
-    if (reportsByCategory[index]) {
-      const category = reportsByCategory[index].name;
-      toggleCategory(category);
-    }
-  };
-
-  const handleExportReportsData = () => {
-    try {
-      if (reportsByTimeFrame.length === 0) {
-        toast.info("Nothing to export", {
-          description: "There is no report data available to export."
-        });
-        return;
-      }
-
-      let exportData = JSON.parse(JSON.stringify(reportsByTimeFrame));
-      
-      if (!showOpenReports) {
-        exportData = exportData.map((item: any) => {
-          const { open, ...rest } = item;
-          return rest;
-        });
-      }
-      
-      if (!showInProgressReports) {
-        exportData = exportData.map((item: any) => {
-          const { inProgress, ...rest } = item;
-          return rest;
-        });
-      }
-      
-      if (!showClosedReports) {
-        exportData = exportData.map((item: any) => {
-          const { closed, ...rest } = item;
-          return rest;
-        });
-      }
-      
-      const timeFrameInfo = timeFrame;
-      const yearInfo = selectedYear ? `_${selectedYear}` : '';
-      const monthInfo = selectedMonth !== undefined ? `_${months[selectedMonth]}` : '';
-      const dayInfo = selectedDay ? `_day${selectedDay}` : '';
-      
-      let headers = ['Time Period'];
-      if (showOpenReports) headers.push('Open Reports');
-      if (showInProgressReports) headers.push('In Progress Reports');
-      if (showClosedReports) headers.push('Closed Reports');
-      
-      const csvData = exportData.map((row: any) => {
-        const csvRow = [row.name];
-        if (showOpenReports) csvRow.push(row.open);
-        if (showInProgressReports) csvRow.push(row.inProgress);
-        if (showClosedReports) csvRow.push(row.closed);
-        return csvRow;
-      });
-      
-      csvData.unshift(headers);
-      
-      const csvContent = csvData.map(row => 
-        row.map((field: any) => {
-          const stringField = String(field);
-          if (stringField.includes(',') || stringField.includes('"') || stringField.includes('\n')) {
-            return `"${stringField.replace(/"/g, '""')}"`;
-          }
-          return stringField;
-        }).join(',')
-      ).join('\n');
-      
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      
-      const filename = `reports_${timeFrameInfo}${yearInfo}${monthInfo}${dayInfo}_${new Date().toISOString().split('T')[0]}.csv`;
-      
-      link.setAttribute('download', filename);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-      
-      toast.success("Export successful", {
-        description: `${reportsByTimeFrame.length} time periods exported to CSV`
-      });
-    } catch (error) {
-      console.error("Export error:", error);
-      toast.error("Export failed", {
-        description: "There was an error exporting the report data. Please try again."
-      });
-    }
-  };
-
-  const handleExportCategoryData = () => {
-    try {
-      if (reportsByCategory.length === 0) {
-        toast.info("Nothing to export", {
-          description: "There is no category data available to export."
-        });
-        return;
-      }
-      
-      const dataToExport = selectedCategories.length > 0
-        ? reportsByCategory.filter(cat => selectedCategories.includes(cat.name))
-        : reportsByCategory;
-      
-      const headers = ['Category', 'Reports Count', 'Percentage'];
-      
-      const totalReports = reportsByCategory.reduce((sum, cat) => sum + cat.value, 0);
-      
-      const categoryCsv = dataToExport.map(category => [
-        category.name,
-        category.value,
-        `${((category.value / totalReports) * 100).toFixed(2)}%`
-      ]);
-      
-      categoryCsv.unshift(headers);
-      
-      const csvContent = categoryCsv.map(row => 
-        row.map(field => {
-          const stringField = String(field);
-          if (stringField.includes(',') || stringField.includes('"') || stringField.includes('\n')) {
-            return `"${stringField.replace(/"/g, '""')}"`;
-          }
-          return stringField;
-        }).join(',')
-      ).join('\n');
-      
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      
-      const categoryFilter = selectedCategories.length > 0 
-        ? `_${selectedCategories.map(c => c.replace(/\s+/g, '_')).join('_and_')}`
-        : '';
-      const filename = `category_distribution${categoryFilter}_${new Date().toISOString().split('T')[0]}.csv`;
-      
-      link.setAttribute('download', filename);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-      
-      toast.success("Export successful", {
-        description: `${dataToExport.length} categories exported to CSV`
-      });
-    } catch (error) {
-      console.error("Export error:", error);
-      toast.error("Export failed", {
-        description: "There was an error exporting the category data. Please try again."
-      });
-    }
-  };
-
-  const handleExportLocationData = () => {
-    try {
-      const exportEvent = new CustomEvent('export-map-data', {
-        detail: {
-          filterType: activeReportTab === 'categories' ? 'category' : 'timeframe',
-          categories: selectedCategories,
-          timeFrame: timeFrame,
-          year: selectedYear,
-          month: selectedMonth,
-          day: selectedDay
-        }
-      });
-      
-      document.dispatchEvent(exportEvent);
-      
-      toast.success('Exportando datos de ubicaciones', {
-        description: `Los datos se están filtrando según: ${activeReportTab === 'categories' ? 'Categorías seleccionadas' : 'Periodo de tiempo seleccionado'}`
-      });
-    } catch (error) {
-      console.error("Export error:", error);
-      toast.error("Export failed", {
-        description: "There was an error triggering the export. Please try again."
-      });
-    }
-  };
-
-  useEffect(() => {
-    if (selectedMonth !== undefined && selectedYear !== undefined) {
-      const days = new Date(selectedYear, selectedMonth + 1, 0).getDate();
-      const daysArray = Array.from({ length: days }, (_, i) => i + 1);
-      setDaysInMonth(daysArray);
-      
-      if (selectedDay && selectedDay > days) {
-        setSelectedDay(days);
-      } else if (!selectedDay && daysArray.length > 0) {
-        setSelectedDay(1);
-      }
-    }
-  }, [selectedMonth, selectedYear, selectedDay, setSelectedDay]);
-
-  useEffect(() => {
-    if (allReports && allReports.length > 0) {
-      const years = allReports.map(report => new Date(report.createdAt).getFullYear());
-      const uniqueYears = Array.from(new Set(years)).sort();
-      
-      if (uniqueYears.length === 0 || Math.min(...uniqueYears) > new Date().getFullYear()) {
-        uniqueYears.unshift(new Date().getFullYear());
-      }
-      
-      setAvailableYears(uniqueYears);
-      
-      if (uniqueYears.length > 0 && !selectedYear) {
-        setSelectedYear(Math.max(...uniqueYears));
-      }
-    }
-  }, [allReports, selectedYear, setSelectedYear]);
-
-  const generateChartData = (): ReportTimeData[] => {
-    if (!allReports || !allReports.length) return [];
-    
-    const reports = [...allReports];
-    let timeFrameData: Record<string, ReportTimeData> = {};
-    
-    let filteredReports = reports;
-    
-    if (selectedYear) {
-      filteredReports = filteredReports.filter(report => {
-        const reportDate = new Date(report.createdAt);
-        return reportDate.getFullYear() === selectedYear;
-      });
-    }
-    
-    if (timeFrame === "month" && selectedMonth !== undefined) {
-      filteredReports = filteredReports.filter(report => {
-        const reportDate = new Date(report.createdAt);
-        return reportDate.getMonth() === selectedMonth;
-      });
-      
-      const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
-      for (let i = 1; i <= daysInMonth; i++) {
-        timeFrameData[i.toString()] = { name: i.toString(), open: 0, closed: 0, inProgress: 0 };
-      }
-    } else if (timeFrame === "week" && selectedMonth !== undefined) {
-      filteredReports = filteredReports.filter(report => {
-        const reportDate = new Date(report.createdAt);
-        return reportDate.getMonth() === selectedMonth;
-      });
-      
-      const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-      days.forEach(day => {
-        timeFrameData[day] = { name: day, open: 0, closed: 0, inProgress: 0 };
-      });
-    } else if (timeFrame === "year") {
-      const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-      months.forEach(month => {
-        timeFrameData[month] = { name: month, open: 0, closed: 0, inProgress: 0 };
-      });
-    } else if (timeFrame === "day" && selectedMonth !== undefined && selectedDay !== undefined) {
-      filteredReports = filteredReports.filter(report => {
-        const reportDate = new Date(report.createdAt);
-        return reportDate.getMonth() === selectedMonth && 
-               reportDate.getDate() === selectedDay;
-      });
-      
-      for (let i = 0; i < 24; i++) {
-        const hourLabel = `${i}:00`;
-        timeFrameData[hourLabel] = { name: hourLabel, open: 0, closed: 0, inProgress: 0 };
-      }
-    }
-    
-    console.log(`Filtered reports for ${timeFrame} chart:`, filteredReports.length, 
-                `found with year: ${selectedYear}, month: ${selectedMonth !== undefined ? months[selectedMonth] : 'all'}, day: ${selectedDay || 'all'}`);
-    
-    filteredReports.forEach(report => {
-      const reportDate = new Date(report.createdAt);
-      const key = getTimeFrameFormat(reportDate, timeFrame);
-      
-      if (!timeFrameData[key]) {
-        timeFrameData[key] = { name: key, open: 0, closed: 0, inProgress: 0 };
-      }
-      
-      if (report.status === "Open") {
-        timeFrameData[key].open += 1;
-      } else if (report.status === "In Progress") {
-        timeFrameData[key].inProgress += 1;
-      } else if (report.status === "Resolved") {
-        timeFrameData[key].closed += 1;
-      }
-    });
-    
-    let dataArray = Object.values(timeFrameData);
-    
-    if (timeFrame === "day") {
-      dataArray.sort((a, b) => parseInt(a.name) - parseInt(b.name));
-    } else if (timeFrame === "month") {
-      dataArray.sort((a, b) => parseInt(a.name) - parseInt(b.name));
-    } else if (timeFrame === "week") {
-      const daysOrder: Record<string, number> = { "Sun": 0, "Mon": 1, "Tue": 2, "Wed": 3, "Thu": 4, "Fri": 5, "Sat": 6 };
-      dataArray.sort((a, b) => daysOrder[a.name] - daysOrder[b.name]);
-    } else if (timeFrame === "year") {
-      const monthsOrder: Record<string, number> = { "Jan": 0, "Feb": 1, "Mar": 2, "Apr": 3, "May": 4, "Jun": 5, 
-                           "Jul": 6, "Aug": 7, "Sep": 8, "Oct": 9, "Nov": 10, "Dec": 11 };
-      dataArray.sort((a, b) => monthsOrder[a.name] - monthsOrder[b.name]);
-    }
-    
-    console.log("Sorted data array for chart:", dataArray);
-    return dataArray;
-  };
-
-  const refreshDashboardData = () => {
-    const reports = getReports();
-    console.log("All reports loaded:", reports.length);
-    setAllReports(reports);
-    
-    const { 
-      totalReports, 
-      openIssues, 
-      resolvedIssues, 
-      inProgressIssues,
-      averageResponse,
-      reportsByCategory,
-      recentActivities,
-    } = getReportsStats();
-    
-    setStats({
-      totalReports,
-      openIssues,
-      resolvedIssues,
-      averageResponse
-    });
-    
-    setReportsByCategory(reportsByCategory);
-    setRecentActivities(recentActivities);
-    setLocationHotspots(getReportLocationHotspots());
-  };
-
-  useEffect(() => {
-    refreshDashboardData();
-  }, [refreshKey]);
-
-  useEffect(() => {
-    const intervalId = setInterval(() => {
-      setRefreshKey(prevKey => prevKey + 1);
-    }, 3000);
-    
-    return () => clearInterval(intervalId);
-  }, []);
-
-  useEffect(() => {
-    if (allReports && allReports.length > 0) {
-      console.log(`Regenerating chart data based on timeframe: ${timeFrame}, year: ${selectedYear}, month: ${selectedMonth !== undefined ? months[selectedMonth] : 'all'}, day: ${selectedDay || 'all'}`);
-      const timeFrameData = generateChartData();
-      setReportsByTimeFrame(timeFrameData);
-    }
-  }, [timeFrame, selectedYear, selectedMonth, selectedDay, allReports]);
-
-  const handleTimeFrameChange = (value: string) => {
-    setTimeFrame(value as "day" | "week" | "month" | "year");
-  };
-
-  const renderTimePeriodSelectors = () => {
-    if (timeFrame === "year") {
-      return (
-        <div className="flex space-x-2 items-center">
-          <div className="flex items-center space-x-2">
-            <span className="text-sm font-medium">Year:</span>
-            <Select
-              value={selectedYear?.toString()}
-              onValueChange={(value) => setSelectedYear(parseInt(value))}
-            >
-              <SelectTrigger className="w-[120px]">
-                <SelectValue placeholder="Select year" />
-              </SelectTrigger>
-              <SelectContent>
-                {availableYears.map((year) => (
-                  <SelectItem key={year} value={year.toString()}>
-                    {year}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-      );
-    } 
-    
-    if (timeFrame === "month" || timeFrame === "week") {
-      return (
-        <div className="flex flex-wrap space-x-2 items-center">
-          <div className="flex items-center space-x-2 mb-2 sm:mb-0">
-            <span className="text-sm font-medium">Year:</span>
-            <Select
-              value={selectedYear?.toString()}
-              onValueChange={(value) => setSelectedYear(parseInt(value))}
-            >
-              <SelectTrigger className="w-[120px]">
-                <SelectValue placeholder="Select year" />
-              </SelectTrigger>
-              <SelectContent>
-                {availableYears.map((year) => (
-                  <SelectItem key={year} value={year.toString()}>
-                    {year}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div className="flex items-center space-x-2">
-            <span className="text-sm font-medium">Month:</span>
-            <Select
-              value={selectedMonth?.toString()}
-              onValueChange={(value) => setSelectedMonth(parseInt(value))}
-            >
-              <SelectTrigger className="w-[120px]">
-                <SelectValue placeholder="Select month" />
-              </SelectTrigger>
-              <SelectContent>
-                {months.map((month, index) => (
-                  <SelectItem key={index} value={index.toString()}>
-                    {month}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-      );
-    }
-    
-    if (timeFrame === "day") {
-      return (
-        <div className="flex flex-wrap gap-2 items-center">
-          <div className="flex items-center space-x-2">
-            <span className="text-sm font-medium">Year:</span>
-            <Select
-              value={selectedYear?.toString()}
-              onValueChange={(value) => setSelectedYear(parseInt(value))}
-            >
-              <SelectTrigger className="w-[120px]">
-                <SelectValue placeholder="Select year" />
-              </SelectTrigger>
-              <SelectContent>
-                {availableYears.map((year) => (
-                  <SelectItem key={year} value={year.toString()}>
-                    {year}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div className="flex items-center space-x-2">
-            <span className="text-sm font-medium">Month:</span>
-            <Select
-              value={selectedMonth?.toString()}
-              onValueChange={(value) => setSelectedMonth(parseInt(value))}
-            >
-              <SelectTrigger className="w-[120px]">
-                <SelectValue placeholder="Select month" />
-              </SelectTrigger>
-              <SelectContent>
-                {months.map((month, index) => (
-                  <SelectItem key={index} value={index.toString()}>
-                    {month}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div className="flex items-center space-x-2">
-            <span className="text-sm font-medium">Day:</span>
-            <Select
-              value={selectedDay?.toString()}
-              onValueChange={(value) => setSelectedDay(parseInt(value))}
-            >
-              <SelectTrigger className="w-[120px]">
-                <SelectValue placeholder="Select day" />
-              </SelectTrigger>
-              <SelectContent>
-                {daysInMonth.map((day) => (
-                  <SelectItem key={day} value={day.toString()}>
-                    {day}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-      );
-    }
-    
-    return null;
-  };
-
-  const getActivityIcon = (type: string) => {
-    switch (type) {
-      case "report_created":
-        return <FileText className="h-4 w-4 text-blue-500" />;
-      case "report_updated":
-        return <Clock className="h-4 w-4 text-yellow-500" />;
-      case "report_resolved":
-        return <CheckCircle2 className="h-4 w-4 text-green-500" />;
-      case "report_assigned":
-        return <Users className="h-4 w-4 text-purple-500" />;
-      case "priority_changed":
-        return <AlertCircle className="h-4 w-4 text-orange-500" />;
-      case "category_changed":
-        return <Edit className="h-4 w-4 text-indigo-500" />;
-      case "location_changed":
-        return <MapPin className="h-4 w-4 text-pink-500" />;
-      default:
-        return <FileText className="h-4 w-4 text-gray-500" />;
-    }
-  };
-
-  const clearAllSelectedCategories = () => {
-    setSelectedCategories([]);
-    setSelectedCategory(null);
-    setActiveIndex(undefined);
-  };
-
-  const getReportStatusColor = (status: string) => {
-    switch (status) {
-      case "Open":
-        return "text-red-500";
-      case "In Progress":
-        return "text-yellow-500";
-      case "Resolved":
-        return "text-green-500";
-      default:
-        return "text-gray-500";
-    }
-  };
+  
+  const {
+    stats,
+    reportsByCategory,
+    reportsByTimeFrame,
+    allReports,
+    availableYears,
+    daysInMonth,
+    months,
+    activeIndex,
+    activeReportTab,
+    setActiveReportTab,
+    onPieEnter,
+    onPieLeave,
+    onPieClick,
+    handleExportReportsData,
+    handleExportCategoryData,
+    handleExportLocationData,
+    clearAllSelectedCategories,
+    handleTimeFrameChange
+  } = useDashboardData();
 
   return (
     <div className="space-y-6">
@@ -863,401 +108,66 @@ const DashboardContent = () => {
         <Tabs 
           defaultValue="reports" 
           onValueChange={setActiveReportTab}
+          className="flex flex-col h-full"
         >
           <TabsList className="w-full grid grid-cols-2">
             <TabsTrigger value="reports">Reports Overview</TabsTrigger>
             <TabsTrigger value="categories">Category Distribution</TabsTrigger>
           </TabsList>
-          <TabsContent value="reports" className="p-0 mt-4">
-            <Card>
-              <CardHeader>
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-2 md:space-y-0">
-                  <div>
-                    <CardTitle>Reports Activity</CardTitle>
-                    <CardDescription>
-                      Number of opened and resolved reports over time
-                    </CardDescription>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <Toggle
-                      pressed={showOpenReports}
-                      onPressedChange={setShowOpenReports}
-                      variant="outline"
-                      className="border-blue-300 data-[state=on]:bg-blue-100 data-[state=on]:text-blue-700"
-                      onClick={() => setShowOpenReports(!showOpenReports)}
-                    >
-                      Open
-                    </Toggle>
-                    <Toggle
-                      pressed={showInProgressReports}
-                      onPressedChange={setShowInProgressReports}
-                      variant="outline"
-                      className="border-yellow-300 data-[state=on]:bg-yellow-100 data-[state=on]:text-yellow-700"
-                      onClick={() => setShowInProgressReports(!showInProgressReports)}
-                    >
-                      In Progress
-                    </Toggle>
-                    <Toggle
-                      pressed={showClosedReports}
-                      onPressedChange={setShowClosedReports}
-                      variant="outline"
-                      className="border-green-300 data-[state=on]:bg-green-100 data-[state=on]:text-green-700"
-                      onClick={() => setShowClosedReports(!showClosedReports)}
-                    >
-                      Closed
-                    </Toggle>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex items-center gap-1"
-                      onClick={handleExportReportsData}
-                    >
-                      <Download className="h-4 w-4" />
-                      Export
-                    </Button>
-                  </div>
-                </div>
-                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mt-4 gap-2">
-                  <Tabs defaultValue={timeFrame} onValueChange={handleTimeFrameChange}>
-                    <TabsList>
-                      <TabsTrigger value="day">Day</TabsTrigger>
-                      <TabsTrigger value="week">Week</TabsTrigger>
-                      <TabsTrigger value="month">Month</TabsTrigger>
-                      <TabsTrigger value="year">Year</TabsTrigger>
-                    </TabsList>
-                  </Tabs>
-                  
-                  {renderTimePeriodSelectors()}
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="h-80">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart
-                      data={reportsByTimeFrame}
-                      margin={{
-                        top: 5,
-                        right: 30,
-                        left: 20,
-                        bottom: 5,
-                      }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" />
-                      <YAxis />
-                      <Tooltip />
-                      <Legend />
-                      {showOpenReports && (
-                        <Line
-                          type="monotone"
-                          dataKey="open"
-                          name="Open Reports"
-                          stroke="#0EA5E9"
-                          activeDot={{ r: 8 }}
-                        />
-                      )}
-                      {showInProgressReports && (
-                        <Line
-                          type="monotone"
-                          dataKey="inProgress"
-                          name="In Progress Reports"
-                          stroke="#FFBB28"
-                          activeDot={{ r: 8 }}
-                        />
-                      )}
-                      {showClosedReports && (
-                        <Line 
-                          type="monotone" 
-                          dataKey="closed" 
-                          name="Closed Reports"
-                          stroke="#10B981" 
-                        />
-                      )}
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
+          <TabsContent value="reports" className="p-0 mt-4 flex-grow">
+            <ReportsOverview
+              reportsByTimeFrame={reportsByTimeFrame}
+              showOpenReports={showOpenReports}
+              showInProgressReports={showInProgressReports}
+              showClosedReports={showClosedReports}
+              setShowOpenReports={setShowOpenReports}
+              setShowInProgressReports={setShowInProgressReports}
+              setShowClosedReports={setShowClosedReports}
+              timeFrame={timeFrame}
+              selectedYear={selectedYear}
+              selectedMonth={selectedMonth}
+              selectedDay={selectedDay}
+              availableYears={availableYears}
+              daysInMonth={daysInMonth}
+              months={months}
+              handleTimeFrameChange={handleTimeFrameChange}
+              setSelectedYear={setSelectedYear}
+              setSelectedMonth={setSelectedMonth}
+              setSelectedDay={setSelectedDay}
+              handleExportReportsData={handleExportReportsData}
+            />
           </TabsContent>
-          <TabsContent value="categories" className="p-0 mt-4">
-            <Card>
-              <CardHeader>
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-2 md:space-y-0">
-                  <div>
-                    <CardTitle>Reports by Category</CardTitle>
-                    <CardDescription>
-                      Distribution of reports across different categories
-                    </CardDescription>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {selectedCategories.length > 0 && (
-                      <Badge 
-                        variant="outline" 
-                        className="bg-blue-50 text-blue-700 hover:bg-blue-100 cursor-pointer flex items-center gap-1"
-                        onClick={clearAllSelectedCategories}
-                      >
-                        <span>
-                          Filtering by: {selectedCategories.join(', ')}
-                        </span>
-                        <X className="h-3.5 w-3.5" />
-                      </Badge>
-                    )}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex items-center gap-1"
-                      onClick={handleExportCategoryData}
-                    >
-                      <Download className="h-4 w-4" />
-                      Export
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="h-80" ref={pieChartRef}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={reportsByCategory}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={70}
-                        outerRadius={100}
-                        fill="#8884d8"
-                        paddingAngle={2}
-                        dataKey="value"
-                        activeIndex={getActiveIndices()}
-                        activeShape={renderActiveShape}
-                        onMouseEnter={onPieEnter}
-                        onMouseLeave={onPieLeave}
-                        onClick={onPieClick}
-                        label={renderCustomizedLabel}
-                        labelLine={true}
-                      >
-                        {reportsByCategory.map((entry, index) => (
-                          <Cell 
-                            key={`cell-${index}`} 
-                            fill={COLORS[index % COLORS.length]} 
-                            style={{ 
-                              cursor: 'pointer',
-                              opacity: selectedCategories.length > 0 && !selectedCategories.includes(entry.name) ? 0.5 : 1 
-                            }}
-                            className="transition-all duration-200 hover:opacity-90"
-                          />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                      {renderCenterLabel()}
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="mt-4 text-center text-sm">
-                  <p className="text-muted-foreground mb-2">
-                    Click en una categoría para filtrar. Selecciona varias para comparar.
-                  </p>
-                  {selectedCategories.length > 0 && (
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={clearAllSelectedCategories}
-                      className="flex items-center"
-                    >
-                      <FilterX className="h-4 w-4 mr-2" />
-                      Clear category filters
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+          <TabsContent value="categories" className="p-0 mt-4 flex-grow">
+            <CategoryDistribution
+              reportsByCategory={reportsByCategory}
+              selectedCategories={selectedCategories}
+              activeIndex={activeIndex}
+              onPieEnter={onPieEnter}
+              onPieLeave={onPieLeave}
+              onPieClick={onPieClick}
+              clearAllSelectedCategories={clearAllSelectedCategories}
+              handleExportCategoryData={handleExportCategoryData}
+            />
           </TabsContent>
         </Tabs>
 
-        <Card>
-          <CardHeader>
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-2 md:space-y-0">
-              <div>
-                <CardTitle>Report Locations</CardTitle>
-                <CardDescription>
-                  Geographic distribution of reported issues
-                </CardDescription>
-              </div>
-              <div className="flex items-center gap-2">
-                {selectedCategories.length > 0 && activeReportTab === "categories" && (
-                  <Badge variant="outline" className="bg-blue-50 text-blue-700">
-                    {selectedCategories.length > 1 
-                      ? `${selectedCategories.length} categories selected`
-                      : `Showing: ${selectedCategories[0]}`}
-                  </Badge>
-                )}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex items-center gap-1"
-                  onClick={handleExportLocationData}
-                >
-                  <Download className="h-4 w-4" />
-                  Export Map Data
-                </Button>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="p-0">
-            <MapView 
-              height="330px" 
-              categoryOnly={activeReportTab === "categories"}
-            />
-          </CardContent>
-        </Card>
+        <MapSection
+          selectedCategories={selectedCategories}
+          activeReportTab={activeReportTab}
+          handleExportLocationData={handleExportLocationData}
+        />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2">
-          <CardHeader className="pb-2">
-            <div className="flex justify-between items-center">
-              <div>
-                <CardTitle>Recent Activity</CardTitle>
-                <CardDescription>
-                  Latest updates and submitted reports
-                </CardDescription>
-              </div>
-              <Badge variant="outline" className="bg-blue-50 text-blue-700 hover:bg-blue-100">
-                Real-time updates
-              </Badge>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <ScrollArea className="h-[400px] pr-4">
-              <div className="space-y-4">
-                {recentActivities.length > 0 ? (
-                  getAllActivities().map((activity) => (
-                    <Alert key={activity.id} variant="default" className="transition-all duration-300 animate-in fade-in">
-                      <div className="flex items-start">
-                        <div className="mr-2 mt-0.5">
-                          {getActivityIcon(activity.type)}
-                        </div>
-                        <div className="flex-1">
-                          <AlertTitle className="text-sm font-medium">
-                            {activity.title}
-                          </AlertTitle>
-                          <AlertDescription className="text-xs mt-1">
-                            <div className="flex flex-col sm:flex-row sm:justify-between">
-                              <span>{activity.description}</span>
-                              <div className="flex items-center space-x-2 mt-1 sm:mt-0">
-                                <span className="text-muted-foreground">
-                                  {activity.time}
-                                </span>
-                                <Link 
-                                  to={`/reports/${activity.relatedReportId}`} 
-                                  className="inline-flex items-center text-blue-600 hover:text-blue-800"
-                                >
-                                  <Eye className="h-3 w-3 mr-1" />
-                                  <span className="text-xs">View</span>
-                                </Link>
-                              </div>
-                            </div>
-                          </AlertDescription>
-                        </div>
-                      </div>
-                    </Alert>
-                  ))
-                ) : (
-                  Array.from({ length: 4 }).map((_, index) => (
-                    <div key={index} className="flex items-start space-x-4 p-4 border rounded-md">
-                      <Skeleton className="h-5 w-5 rounded-full" />
-                      <div className="space-y-2 flex-1">
-                        <Skeleton className="h-4 w-1/4" />
-                        <Skeleton className="h-3 w-3/4" />
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </ScrollArea>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <div className="flex justify-between items-center">
-              <div>
-                <CardTitle>
-                  Hotspot Locations
-                </CardTitle>
-                <CardDescription>
-                  Live report location history
-                </CardDescription>
-              </div>
-              <Badge variant="outline" className="bg-blue-50 text-blue-700 hover:bg-blue-100">
-                Real-time
-              </Badge>
-            </div>
-          </CardHeader>
-          <CardContent className="p-0">
-            <ScrollArea className="h-[400px]">
-              <div className="divide-y divide-border">
-                {allReports.length > 0 ? (
-                  allReports.map((report, index) => (
-                    <Link
-                      key={report.id}
-                      to={`/reports/${report.id}`}
-                      className="block hover:bg-muted/50 transition-colors"
-                    >
-                      <div className="p-3 flex items-center gap-3">
-                        <div className={`flex-shrink-0 ${getReportStatusColor(report.status)}`}>
-                          <MapPin className="h-5 w-5" />
-                        </div>
-                        <div className="flex-grow min-w-0">
-                          <div className="flex justify-between items-start mb-1">
-                            <h4 className="text-sm font-medium truncate">
-                              {report.location?.name || "Unknown location"}
-                            </h4>
-                            <Badge variant="outline" className="ml-2 text-xs">
-                              {report.category}
-                            </Badge>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="text-xs text-muted-foreground truncate max-w-[180px] mb-1">
-                                {report.title}
-                              </p>
-                              <div className="flex items-center text-xs text-muted-foreground gap-1">
-                                <span>Lat: {report.location?.lat ? report.location.lat.toFixed(2) : "N/A"}</span>
-                                <span>Lng: {report.location?.lng ? report.location.lng.toFixed(2) : "N/A"}</span>
-                              </div>
-                            </div>
-                            <ChevronRight className="h-4 w-4 text-muted-foreground ml-1 flex-shrink-0" />
-                          </div>
-                        </div>
-                      </div>
-                    </Link>
-                  ))
-                ) : (
-                  Array.from({ length: 5 }).map((_, index) => (
-                    <div key={index} className="p-3 flex items-center gap-3">
-                      <Skeleton className="h-5 w-5 rounded-full" />
-                      <div className="flex-grow">
-                        <Skeleton className="h-4 w-3/4 mb-1" />
-                        <Skeleton className="h-3 w-1/2" />
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </ScrollArea>
-          </CardContent>
-        </Card>
+        <ActivityList activities={getAllActivities()} />
+        <LocationList reports={allReports} />
       </div>
     </div>
   );
 };
 
 const DashboardView = () => {
-  return (
-    <TimeFilterProvider>
-      <DashboardContent />
-    </TimeFilterProvider>
-  );
+  return <DashboardContent />;
 };
 
 export default DashboardView;
