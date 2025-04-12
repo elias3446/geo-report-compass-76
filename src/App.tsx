@@ -13,6 +13,7 @@ import EditReport from "./pages/EditReport";
 import MapPage from "./pages/MapView";
 import SettingsPage from "./pages/SettingsPage";
 import NotFound from "./pages/NotFound";
+import Dashboard from "./pages/Dashboard";
 
 const App = () => {
   // Create a new QueryClient instance inside the component
@@ -32,6 +33,7 @@ const App = () => {
             <Route path="/new-report" element={<NewReport />} />
             <Route path="/map" element={<MapPage />} />
             <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/dashboard" element={<Dashboard />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

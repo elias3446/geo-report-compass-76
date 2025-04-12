@@ -1,4 +1,3 @@
-
 import { 
   Card, 
   CardContent, 
@@ -42,7 +41,8 @@ import {
   Eye,
   FilterX,
   Download,
-  X
+  X,
+  ChevronRight
 } from "lucide-react";
 import MapView from "@/components/map/MapView";
 import { useEffect, useState, useMemo, useRef } from "react";
@@ -60,6 +60,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { useReports } from "@/contexts/ReportContext";
+import { useNavigate } from "react-router-dom";
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658'];
 
@@ -70,27 +71,20 @@ interface ReportTimeData {
   inProgress: number;
 }
 
-// Componente personalizado para renderizar las etiquetas externas del gráfico
 const renderCustomizedLabel = (props: any) => {
   const { cx, cy, midAngle, innerRadius, outerRadius, percent, index, payload, value, fill } = props;
   const RADIAN = Math.PI / 180;
-  // Calcula la posición de la etiqueta externa
   const radius = outerRadius * 1.15;
   const x = cx + radius * Math.cos(-midAngle * RADIAN);
   const y = cy + radius * Math.sin(-midAngle * RADIAN);
-  
-  // Ajusta el anclaje del texto basado en la posición
   const textAnchor = x > cx ? 'start' : 'end';
-
   return (
     <g>
-      {/* Línea desde el arco hasta la etiqueta */}
       <path 
         d={`M${cx + outerRadius * Math.cos(-midAngle * RADIAN)},${cy + outerRadius * Math.sin(-midAngle * RADIAN)}L${x},${y}`} 
         stroke={fill} 
         fill="none" 
       />
-      {/* Etiqueta con información */}
       <text 
         x={x} 
         y={y} 
@@ -158,6 +152,8 @@ const DashboardContent = () => {
     "July", "August", "September", "October", "November", "December"
   ];
   
+  const navigate = useNavigate();
+
   useEffect(() => {
     if (activeReportTab === "reports") {
       setSelectedCategory(null);
@@ -445,10 +441,8 @@ const DashboardContent = () => {
     }
   };
 
-  // New function to handle exporting location data
   const handleExportLocationData = () => {
     try {
-      // Create a custom event to trigger the export in MapView component
       const exportEvent = new CustomEvent('export-map-data', {
         detail: {
           filterType: activeReportTab === 'categories' ? 'category' : 'timeframe',
@@ -810,32 +804,51 @@ const DashboardContent = () => {
     setActiveIndex(undefined);
   };
 
+  const getReportStatusColor = (status: string) => {
+    switch (status) {
+      case "Open":
+        return "text-red-500";
+      case "In Progress":
+        return "text-yellow-500";
+      case "Resolved":
+        return "text-green-500";
+      default:
+        return "text-gray-500";
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard 
-          title="Total Reports"
-          value={stats.totalReports.toString()}
-          description="All time submitted reports"
-          icon={FileText}
-          change={{ value: "12%", positive: true }}
-        />
-        <StatCard 
-          title="Open Issues"
-          value={stats.openIssues.toString()}
-          description="Pending resolution"
-          icon={AlertCircle}
-          iconColor="text-yellow-500"
-          change={{ value: "5%", positive: false }}
-        />
-        <StatCard 
-          title="Resolved Issues"
-          value={stats.resolvedIssues.toString()}
-          description="Successfully addressed"
-          icon={CheckCircle2}
-          iconColor="text-green-500"
-          change={{ value: "18%", positive: true }}
-        />
+        <div onClick={() => navigate('/reports')} className="cursor-pointer transition-transform hover:scale-[1.02]">
+          <StatCard 
+            title="Total Reports"
+            value={stats.totalReports.toString()}
+            description="All time submitted reports"
+            icon={FileText}
+            change={{ value: "12%", positive: true }}
+          />
+        </div>
+        <div onClick={() => navigate('/reports?status=Open')} className="cursor-pointer transition-transform hover:scale-[1.02]">
+          <StatCard 
+            title="Open Issues"
+            value={stats.openIssues.toString()}
+            description="Pending resolution"
+            icon={AlertCircle}
+            iconColor="text-yellow-500"
+            change={{ value: "5%", positive: false }}
+          />
+        </div>
+        <div onClick={() => navigate('/reports?status=Resolved')} className="cursor-pointer transition-transform hover:scale-[1.02]">
+          <StatCard 
+            title="Resolved Issues"
+            value={stats.resolvedIssues.toString()}
+            description="Successfully addressed"
+            icon={CheckCircle2}
+            iconColor="text-green-500"
+            change={{ value: "18%", positive: true }}
+          />
+        </div>
         <StatCard 
           title="Average Response"
           value={stats.averageResponse}
@@ -1166,40 +1179,72 @@ const DashboardContent = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>
-              Hotspot Locations
-            </CardTitle>
-            <CardDescription>
-              Areas with the highest number of reports
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {locationHotspots.length > 0 ? (
-                locationHotspots.map((location, index) => (
-                  <div key={index} className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <MapPin className="h-4 w-4 text-red-500" />
-                      <span className="text-sm font-medium">{location.name}</span>
-                    </div>
-                    <div className="flex items-center">
-                      <span className="text-sm font-semibold">{location.count}</span>
-                      <span className="text-xs text-muted-foreground ml-1">reports</span>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                Array.from({ length: 5 }).map((_, index) => (
-                  <div key={index} className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <Skeleton className="h-4 w-4 rounded-full" />
-                      <Skeleton className="h-4 w-24" />
-                    </div>
-                    <Skeleton className="h-4 w-12" />
-                  </div>
-                ))
-              )}
+            <div className="flex justify-between items-center">
+              <div>
+                <CardTitle>
+                  Hotspot Locations
+                </CardTitle>
+                <CardDescription>
+                  Live report location history
+                </CardDescription>
+              </div>
+              <Badge variant="outline" className="bg-blue-50 text-blue-700 hover:bg-blue-100">
+                Real-time
+              </Badge>
             </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            <ScrollArea className="h-[400px]">
+              <div className="divide-y divide-border">
+                {allReports.length > 0 ? (
+                  allReports.map((report, index) => (
+                    <Link
+                      key={report.id}
+                      to={`/reports/${report.id}`}
+                      className="block hover:bg-muted/50 transition-colors"
+                    >
+                      <div className="p-3 flex items-center gap-3">
+                        <div className={`flex-shrink-0 ${getReportStatusColor(report.status)}`}>
+                          <MapPin className="h-5 w-5" />
+                        </div>
+                        <div className="flex-grow min-w-0">
+                          <div className="flex justify-between items-start mb-1">
+                            <h4 className="text-sm font-medium truncate">
+                              {report.location?.name || "Unknown location"}
+                            </h4>
+                            <Badge variant="outline" className="ml-2 text-xs">
+                              {report.category}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-xs text-muted-foreground truncate max-w-[180px] mb-1">
+                                {report.title}
+                              </p>
+                              <div className="flex items-center text-xs text-muted-foreground gap-1">
+                                <span>Lat: {report.location?.lat ? report.location.lat.toFixed(2) : "N/A"}</span>
+                                <span>Lng: {report.location?.lng ? report.location.lng.toFixed(2) : "N/A"}</span>
+                              </div>
+                            </div>
+                            <ChevronRight className="h-4 w-4 text-muted-foreground ml-1 flex-shrink-0" />
+                          </div>
+                        </div>
+                      </div>
+                    </Link>
+                  ))
+                ) : (
+                  Array.from({ length: 5 }).map((_, index) => (
+                    <div key={index} className="p-3 flex items-center gap-3">
+                      <Skeleton className="h-5 w-5 rounded-full" />
+                      <div className="flex-grow">
+                        <Skeleton className="h-4 w-3/4 mb-1" />
+                        <Skeleton className="h-3 w-1/2" />
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </ScrollArea>
           </CardContent>
         </Card>
       </div>

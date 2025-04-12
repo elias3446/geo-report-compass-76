@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useReports } from '@/contexts/ReportContext';
@@ -51,7 +50,6 @@ const Dashboard = () => {
   });
   
   useEffect(() => {
-    // Fetch real stats data from the report service
     const stats = getReportsStats();
     setStatsData({
       totalReports: stats.totalReports,
@@ -104,9 +102,21 @@ const Dashboard = () => {
     toggleCategory(category);
   };
   
-  // Fixed fill function for the bar chart that returns a string
-  const getBarFill = (entry: any) => {
-    return selectedCategories.includes(entry.category) ? "#1E40AF" : "#2196F3";
+  const barFillColors = {
+    selected: "#1E40AF",
+    default: "#2196F3"
+  };
+  
+  const getBarFillValue = (entry: any) => {
+    return selectedCategories.includes(entry.category) ? barFillColors.selected : barFillColors.default;
+  };
+  
+  const navigateToReports = (filter?: string) => {
+    if (filter) {
+      navigate(`/reports?status=${filter}`);
+    } else {
+      navigate('/reports');
+    }
   };
   
   return (
@@ -132,6 +142,7 @@ const Dashboard = () => {
           description="All time submitted reports" 
           icon={FileText}
           change={statsData.totalReportsChange}
+          onClick={() => navigateToReports()}
         />
         <StatCard 
           title="Open Issues" 
@@ -140,6 +151,7 @@ const Dashboard = () => {
           icon={AlertTriangle}
           iconColor="text-yellow-500"
           change={statsData.openIssuesChange}
+          onClick={() => navigateToReports('Open')}
         />
         <StatCard 
           title="Resolved Issues" 
@@ -148,6 +160,7 @@ const Dashboard = () => {
           icon={CheckCircle2}
           iconColor="text-green-500"
           change={statsData.resolvedIssuesChange}
+          onClick={() => navigateToReports('Resolved')}
         />
         <StatCard 
           title="Average Response" 
@@ -269,7 +282,7 @@ const Dashboard = () => {
                   <Tooltip />
                   <Bar 
                     dataKey="count" 
-                    fill={getBarFill} 
+                    fill={selectedCategories.length > 0 ? barFillColors.selected : barFillColors.default}
                     radius={[0, 4, 4, 0]} 
                     barSize={20}
                     onClick={(data) => handleCategoryClick(data.category)}

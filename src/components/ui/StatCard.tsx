@@ -13,6 +13,7 @@ interface StatCardProps {
     value: string;
     positive: boolean;
   };
+  onClick?: () => void;
 }
 
 const StatCard = ({
@@ -22,9 +23,13 @@ const StatCard = ({
   icon: Icon,
   iconColor = "text-primary",
   change,
+  onClick,
 }: StatCardProps) => {
   return (
-    <Card className="transition-all duration-300 hover:shadow-md">
+    <Card 
+      className={`transition-all duration-300 ${onClick ? 'hover:shadow-md hover:border-primary/30 cursor-pointer' : ''}`}
+      onClick={onClick}
+    >
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="text-sm font-medium">{title}</CardTitle>
         <TooltipProvider>

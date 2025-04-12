@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { 
   Table, 
   TableBody, 
@@ -45,9 +45,12 @@ type SortConfig = {
 } | null;
 
 const ReportList = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const statusFromUrl = searchParams.get('status');
+  
   const [reports, setReports] = useState<Report[]>([]);
   const [allReports, setAllReports] = useState<Report[]>([]);
-  const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string | null>(statusFromUrl);
   const [sortConfig, setSortConfig] = useState<SortConfig>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const { selectedCategories, toggleCategory } = useTimeFilter();
@@ -55,13 +58,19 @@ const ReportList = () => {
   const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
+    setStatusFilter(statusFromUrl);
+  }, [statusFromUrl]);
+  
+  useEffect(() => {
     const reportData = getReports();
     setAllReports(reportData);
     
     let filteredReports = [...reportData];
     
     if (statusFilter) {
-      filteredReports = filteredReports.filter(report => report.status === statusFilter);
+      filteredReports = filteredReports.filter(report => 
+        report.status.toLowerCase() === statusFilter.toLowerCase()
+      );
     }
     
     if (selectedCategories && selectedCategories.length > 0) {
@@ -127,6 +136,13 @@ const ReportList = () => {
 
   const handleStatusFilter = (status: string | null) => {
     setStatusFilter(status);
+    
+    if (status) {
+      setSearchParams({ status });
+    } else {
+      setSearchParams({});
+    }
+    
     toast(`Filtered by status: ${status || 'All'}`);
   };
 
@@ -145,6 +161,7 @@ const ReportList = () => {
     setSearchQuery("");
     setStatusFilter(null);
     setSortConfig(null);
+    setSearchParams({});
     if (selectedCategories && selectedCategories.length > 0) {
       selectedCategories.forEach(category => toggleCategory(category));
     }
@@ -378,7 +395,7 @@ const ReportList = () => {
                   variant="ghost" 
                   size="sm" 
                   className="h-4 w-4 p-0 hover:bg-transparent"
-                  onClick={() => setStatusFilter(null)}
+                  onClick={() => handleStatusFilter(null)}
                 >
                   &times;
                 </Button>
