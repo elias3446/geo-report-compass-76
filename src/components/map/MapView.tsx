@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useMemo } from "react";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
@@ -5,6 +6,22 @@ import L from "leaflet";
 import { getReports } from "@/services/reportService";
 import { useTimeFilter } from "@/context/TimeFilterContext";
 import { toast } from "sonner";
+
+// Fix TypeScript errors by augmenting the types
+declare module 'react-leaflet' {
+  interface MapContainerProps {
+    center?: [number, number];
+    zoom?: number;
+  }
+  
+  interface TileLayerProps {
+    attribution?: string;
+  }
+  
+  interface MarkerProps {
+    icon?: L.Icon;
+  }
+}
 
 // Create custom marker icons for different report status
 const getReportIcon = (status: string) => {
@@ -110,6 +127,7 @@ const MapView = ({
 
   // Filter reports based on status filters and time period
   const filteredReports = useMemo(() => {
+    console.log("Filtering reports with categories:", selectedCategories);
     let filtered = reports;
     
     // If this is a standalone map (from the Map page), only apply the filterStatus
@@ -157,15 +175,12 @@ const MapView = ({
       }
     }
     
-    // Apply multiple category filter if selectedCategories has items
+    // Apply category filters - important part for Category Distribution
     if (selectedCategories && selectedCategories.length > 0) {
+      console.log("Applying categories filter:", selectedCategories);
       filtered = filtered.filter(report => 
         selectedCategories.includes(report.category)
       );
-    } 
-    // Otherwise, apply single category filter if selected and no multi-selection is active
-    else if (selectedCategory && (!selectedCategories || selectedCategories.length === 0)) {
-      filtered = filtered.filter(report => report.category === selectedCategory);
     }
     
     // Then apply status filters if not in categoryOnly mode
@@ -192,7 +207,7 @@ const MapView = ({
       });
     }
     
-    // When categoryOnly is true, we don't apply status filters
+    // When categoryOnly is true, we only apply category filters (already done above)
     return filtered;
   }, [
     reports, 
@@ -273,6 +288,8 @@ const MapView = ({
       else if (filterStatus === "progress") fileName = "reportes_en_progreso.csv";
       else if (filterStatus === "resolved") fileName = "reportes_resueltos.csv";
       else fileName = "todos_los_reportes.csv";
+    } else if (selectedCategories.length > 0) {
+      fileName = `reportes_${selectedCategories.join('_')}.csv`;
     } else if (selectedCategory) {
       fileName = `reportes_${selectedCategory.toLowerCase().replace(/\s+/g, '_')}.csv`;
     }

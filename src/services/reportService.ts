@@ -1,4 +1,3 @@
-
 // Initial sample data for reports
 let reportsData = [
   {
@@ -50,6 +49,157 @@ let reportsData = [
     location: "Insurgentes Sur",
     assignedTo: "Laura Díaz",
     createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(), // 10 days ago
+  },
+  // Adding more sample data for better statistics
+  {
+    id: 6,
+    title: "Damaged Playground Equipment",
+    category: "Recreation",
+    status: "Open",
+    priority: "Medium",
+    location: "Parque España",
+    assignedTo: "Roberto Sánchez",
+    createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), // 1 day ago
+  },
+  {
+    id: 7,
+    title: "Illegal Dumping",
+    category: "Environment",
+    status: "In Progress",
+    priority: "High",
+    location: "Río Consulado",
+    assignedTo: "Javier Méndez",
+    createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days ago
+  },
+  {
+    id: 8,
+    title: "Public Bench Broken",
+    category: "Urban Furniture",
+    status: "Open",
+    priority: "Low",
+    location: "Alameda Central",
+    assignedTo: "Unassigned",
+    createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days ago
+  },
+  {
+    id: 9,
+    title: "Blocked Storm Drain",
+    category: "Water",
+    status: "Resolved",
+    priority: "Critical",
+    location: "Avenida Constituyentes",
+    assignedTo: "Patricia Flores",
+    createdAt: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString(), // 6 days ago
+  },
+  {
+    id: 10,
+    title: "Damaged Sidewalk",
+    category: "Infrastructure",
+    status: "In Progress",
+    priority: "Medium",
+    location: "Calle Madero",
+    assignedTo: "Fernando López",
+    createdAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(), // 4 days ago
+  },
+  {
+    id: 11,
+    title: "Burned Out Street Light",
+    category: "Infrastructure",
+    status: "Open",
+    priority: "Medium",
+    location: "Paseo de la Reforma",
+    assignedTo: "Unassigned",
+    createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), // 1 day ago
+  },
+  {
+    id: 12,
+    title: "Vandalized Bus Stop",
+    category: "Vandalism",
+    status: "Open",
+    priority: "Low",
+    location: "Avenida Insurgentes",
+    assignedTo: "Maria Rodriguez",
+    createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 days ago
+  },
+  {
+    id: 13,
+    title: "Overflowing Public Trash Bins",
+    category: "Sanitation",
+    status: "In Progress",
+    priority: "Medium",
+    location: "Zócalo",
+    assignedTo: "Diego Martinez",
+    createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days ago
+  },
+  {
+    id: 14,
+    title: "Traffic Light Malfunction",
+    category: "Traffic",
+    status: "Open",
+    priority: "High",
+    location: "Periférico Sur",
+    assignedTo: "Unassigned",
+    createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), // 1 day ago
+  },
+  {
+    id: 15,
+    title: "Damaged Bike Lane",
+    category: "Transportation",
+    status: "Resolved",
+    priority: "Medium",
+    location: "Avenida Chapultepec",
+    assignedTo: "Sofia Torres",
+    createdAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(), // 15 days ago
+  },
+  {
+    id: 16,
+    title: "Water Leak from Main Pipe",
+    category: "Water",
+    status: "In Progress",
+    priority: "Critical",
+    location: "Colonia Roma",
+    assignedTo: "Luis Aguilar",
+    createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), // 1 day ago
+  },
+  {
+    id: 17,
+    title: "Collapsed Sewer Cover",
+    category: "Infrastructure",
+    status: "Resolved",
+    priority: "High",
+    location: "Calle Durango",
+    assignedTo: "Isabel Morales",
+    createdAt: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(), // 8 days ago
+  },
+  {
+    id: 18,
+    title: "Unauthorized Street Vendor",
+    category: "Public Order",
+    status: "Open",
+    priority: "Low",
+    location: "Metro Balderas",
+    assignedTo: "Unassigned",
+    createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 days ago
+  },
+  {
+    id: 19,
+    title: "Noise Complaint - Construction Site",
+    category: "Noise",
+    status: "In Progress",
+    priority: "Medium",
+    location: "Colonia Condesa",
+    assignedTo: "Carmen Vega",
+    createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days ago
+  },
+  {
+    id: 20,
+    title: "Broken Public Water Fountain",
+    category: "Water",
+    status: "Resolved",
+    priority: "Low",
+    location: "Parque México",
+    assignedTo: "Raul Jimenez",
+    createdAt: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString(), // 20 days ago
   }
 ];
 
@@ -115,6 +265,61 @@ let activities: Activity[] = [
     relatedReportId: 3,
     createdAt: new Date(Date.now() - 26 * 60 * 60 * 1000).toISOString()
   },
+  // Adding more sample activities
+  { 
+    id: 5, 
+    type: "report_created", 
+    title: "New report submitted", 
+    description: "Damaged Playground Equipment at Parque España", 
+    time: "4 hours ago",
+    relatedReportId: 6,
+    createdAt: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString()
+  },
+  { 
+    id: 6, 
+    type: "report_updated", 
+    title: "Report status updated", 
+    description: "Illegal Dumping marked as 'In Progress'", 
+    time: "6 hours ago",
+    relatedReportId: 7,
+    createdAt: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString()
+  },
+  { 
+    id: 7, 
+    type: "priority_changed", 
+    title: "Priority changed", 
+    description: "Traffic Light Malfunction priority set to 'High'", 
+    time: "8 hours ago",
+    relatedReportId: 14,
+    createdAt: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString()
+  },
+  { 
+    id: 8, 
+    type: "category_changed", 
+    title: "Category changed", 
+    description: "Water Leak changed from 'Infrastructure' to 'Water'", 
+    time: "12 hours ago",
+    relatedReportId: 16,
+    createdAt: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString()
+  },
+  { 
+    id: 9, 
+    type: "report_assigned", 
+    title: "Report assigned", 
+    description: "Noise Complaint assigned to Carmen Vega", 
+    time: "1 day ago",
+    relatedReportId: 19,
+    createdAt: new Date(Date.now() - 28 * 60 * 60 * 1000).toISOString()
+  },
+  { 
+    id: 10, 
+    type: "report_resolved", 
+    title: "Report resolved", 
+    description: "Blocked Storm Drain at Avenida Constituyentes", 
+    time: "2 days ago",
+    relatedReportId: 9,
+    createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
+  }
 ];
 
 // Get all reports
@@ -288,7 +493,7 @@ export const getReportsStats = () => {
   const resolvedIssues = reportsData.filter(r => r.status === "Resolved").length;
   
   // Calculate average response time (just a mock calculation for now)
-  const averageResponse = "2.3 days";
+  const averageResponse = "1.8 days";
   
   // Calculate reports by category
   const categories: Record<string, number> = {};
@@ -296,21 +501,49 @@ export const getReportsStats = () => {
     categories[report.category] = (categories[report.category] || 0) + 1;
   });
   
-  const reportsByCategory = Object.entries(categories).map(([name, value]) => ({ name, value }));
+  const reportsByCategory = Object.entries(categories)
+    .map(([name, value]) => ({ name, value }))
+    .sort((a, b) => b.value - a.value); // Sort by count descending
   
-  // Generate monthly data (for this demo, we'll create sample data)
+  // Generate monthly data with more realistic values based on our sample data
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  const reportsByMonth = months.map(month => {
-    // In a real app, you would filter reports by month
+  const currentMonth = new Date().getMonth();
+  
+  const reportsByMonth = months.map((month, idx) => {
+    // For current and recent months, use more realistic values based on our data
+    let openCount = 0;
+    let closedCount = 0;
+    
+    if (idx === currentMonth) {
+      // For current month, count from our actual data
+      openCount = reportsData.filter(r => {
+        const date = new Date(r.createdAt);
+        return date.getMonth() === idx && (r.status === "Open" || r.status === "In Progress");
+      }).length;
+      
+      closedCount = reportsData.filter(r => {
+        const date = new Date(r.createdAt);
+        return date.getMonth() === idx && r.status === "Resolved";
+      }).length;
+    } else if (idx === (currentMonth - 1 + 12) % 12) {
+      // Last month - some realistic values
+      openCount = Math.round(reportsData.length * 0.2);
+      closedCount = Math.round(reportsData.length * 0.15);
+    } else {
+      // Random values for history
+      openCount = Math.floor(Math.random() * 10) + 2;
+      closedCount = Math.floor(Math.random() * 8) + 1;
+    }
+    
     return {
       name: month,
-      open: Math.floor(Math.random() * 15),
-      closed: Math.floor(Math.random() * 15)
+      open: openCount,
+      closed: closedCount
     };
   });
   
-  // Recent activities - get the most recent 4 activities
-  const recentActivities = getAllActivities().slice(0, 4);
+  // Recent activities - get the most recent activities
+  const recentActivities = getAllActivities().slice(0, 8);
   
   // Location hotspots
   const locationHotspots = getReportLocationHotspots();
@@ -338,8 +571,8 @@ export const getReportLocationHotspots = () => {
   
   // Convert to array and sort by count
   const sortedLocations = Object.entries(locations)
-    .map(([name, value]) => ({ name, value }))
-    .sort((a, b) => b.value - a.value)
+    .map(([name, value]) => ({ name, value, count: value }))
+    .sort((a, b) => b.count - a.count)
     .slice(0, 5); // Top 5 locations
     
   return sortedLocations;

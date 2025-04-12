@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useReports } from '@/contexts/ReportContext';
 import { useTimeFilter } from '@/context/TimeFilterContext';
@@ -30,13 +30,34 @@ import { Badge } from '@/components/ui/badge';
 import ReportCard from '@/components/ReportCard';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { toast } from 'sonner';
+import { getReportsStats } from '@/services/reportService';
+import StatCard from '@/components/ui/StatCard';
 
 const Dashboard = () => {
   const { reports } = useReports();
   const { selectedCategories, toggleCategory } = useTimeFilter();
   const navigate = useNavigate();
+  const [statsData, setStatsData] = useState({
+    totalReports: 0,
+    openIssues: 0,
+    inProgressIssues: 0,
+    resolvedIssues: 0,
+    averageResponse: "0 days",
+  });
   
-  const totalReports = reports.length;
+  useEffect(() => {
+    // Fetch real stats data from the report service
+    const stats = getReportsStats();
+    setStatsData({
+      totalReports: stats.totalReports,
+      openIssues: stats.openIssues,
+      inProgressIssues: stats.inProgressIssues,
+      resolvedIssues: stats.resolvedIssues,
+      averageResponse: stats.averageResponse,
+    });
+  }, []);
+  
+  const totalReports = statsData.totalReports;
   const approvedReports = reports.filter(r => r.status === 'approved').length;
   const pendingReports = reports.filter(r => r.status === 'submitted').length;
   const draftReports = reports.filter(r => r.status === 'draft').length;
@@ -74,6 +95,11 @@ const Dashboard = () => {
     toggleCategory(category);
   };
   
+  // Fixed fill function for the bar chart that returns a string instead of a function
+  const getBarFill = (entry: any) => {
+    return selectedCategories.includes(entry.category) ? "#1E40AF" : "#2196F3";
+  };
+  
   return (
     <div className="container py-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
@@ -91,67 +117,37 @@ const Dashboard = () => {
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Total Reports</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{totalReports}</div>
-            <p className="text-xs text-muted-foreground">Geographic reports in the system</p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Approved</CardTitle>
-            <CheckCircle2 className="h-4 w-4 text-geo-green" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{approvedReports}</div>
-            <div className="flex items-center pt-1">
-              <Progress value={(approvedReports / totalReports) * 100} className="h-2" />
-              <span className="text-xs text-muted-foreground ml-2">
-                {Math.round((approvedReports / totalReports) * 100)}%
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Pending</CardTitle>
-            <Clock className="h-4 w-4 text-geo-blue" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{pendingReports}</div>
-            <div className="flex items-center pt-1">
-              <Progress value={(pendingReports / totalReports) * 100} className="h-2" />
-              <span className="text-xs text-muted-foreground ml-2">
-                {Math.round((pendingReports / totalReports) * 100)}%
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Drafts & Rejected</CardTitle>
-            <div className="flex gap-1">
-              <AlertTriangle className="h-4 w-4 text-amber-500" />
-              <CircleX className="h-4 w-4 text-destructive" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{draftReports + rejectedReports}</div>
-            <div className="flex items-center pt-1">
-              <Progress value={((draftReports + rejectedReports) / totalReports) * 100} className="h-2" />
-              <span className="text-xs text-muted-foreground ml-2">
-                {Math.round(((draftReports + rejectedReports) / totalReports) * 100)}%
-              </span>
-            </div>
-          </CardContent>
-        </Card>
+        <StatCard 
+          title="Total Reports" 
+          value={statsData.totalReports.toString()} 
+          description="All reports in the system" 
+          icon={FileText}
+          change={{ value: "12%", positive: true }}
+        />
+        <StatCard 
+          title="Open Issues" 
+          value={statsData.openIssues.toString()} 
+          description="Reports needing attention" 
+          icon={AlertTriangle}
+          iconColor="text-yellow-500"
+          change={{ value: "5%", positive: false }}
+        />
+        <StatCard 
+          title="Resolved Issues" 
+          value={statsData.resolvedIssues.toString()} 
+          description="Successfully closed reports" 
+          icon={CheckCircle2}
+          iconColor="text-green-500"
+          change={{ value: "18%", positive: true }}
+        />
+        <StatCard 
+          title="Average Response" 
+          value={statsData.averageResponse} 
+          description="Time to resolve reports" 
+          icon={Clock}
+          iconColor="text-blue-500"
+          change={{ value: "0.5 days", positive: true }}
+        />
       </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6 relative">
@@ -264,7 +260,7 @@ const Dashboard = () => {
                   <Tooltip />
                   <Bar 
                     dataKey="count" 
-                    fill={(data) => selectedCategories.includes(data.category) ? "#1E40AF" : "#2196F3"} 
+                    fill={getBarFill} 
                     radius={[0, 4, 4, 0]} 
                     barSize={20}
                     onClick={(data) => handleCategoryClick(data.category)}

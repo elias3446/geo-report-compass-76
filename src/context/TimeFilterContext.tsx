@@ -2,8 +2,8 @@
 import React, { createContext, useContext, useState, ReactNode } from "react";
 
 interface TimeFilterContextType {
-  timeFrame: "month" | "week" | "day";
-  setTimeFrame: (timeFrame: "month" | "week" | "day") => void;
+  timeFrame: "month" | "week" | "day" | "year";
+  setTimeFrame: (timeFrame: "month" | "week" | "day" | "year") => void;
   selectedYear: number;
   setSelectedYear: (year: number) => void;
   selectedMonth: number;
@@ -29,7 +29,7 @@ export const TimeFilterProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
   const currentDate = new Date();
-  const [timeFrame, setTimeFrame] = useState<"month" | "week" | "day">("month");
+  const [timeFrame, setTimeFrame] = useState<"month" | "week" | "day" | "year">("month");
   const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth());
   const [selectedDay, setSelectedDay] = useState<number | undefined>(undefined);
@@ -40,23 +40,32 @@ export const TimeFilterProvider: React.FC<{ children: ReactNode }> = ({
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
 
   const toggleCategory = (category: string) => {
+    // If the category is empty, clear all selected categories
+    if (!category) {
+      setSelectedCategories([]);
+      setSelectedCategory(null);
+      return;
+    }
+    
     setSelectedCategories(prevCategories => {
-      // Si la categoría ya está seleccionada, la quitamos
+      // If the category is already selected, remove it
       if (prevCategories.includes(category)) {
         return prevCategories.filter(c => c !== category);
       } 
-      // Si no está seleccionada, la agregamos
+      // If not selected, add it
       else {
         return [...prevCategories, category];
       }
     });
     
-    // Actualizamos también selectedCategory para mantener compatibilidad
-    if (selectedCategory === category) {
-      setSelectedCategory(null);
-    } else {
-      setSelectedCategory(category);
-    }
+    // Update selectedCategory for backward compatibility
+    setSelectedCategory(prev => {
+      if (prev === category) {
+        return null;
+      } else {
+        return category;
+      }
+    });
   };
 
   return (

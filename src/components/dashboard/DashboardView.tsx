@@ -479,7 +479,7 @@ const DashboardContent = () => {
       const daysArray = Array.from({ length: days }, (_, i) => i + 1);
       setDaysInMonth(daysArray);
       
-      if (selectedDay > days) {
+      if (selectedDay && selectedDay > days) {
         setSelectedDay(days);
       } else if (!selectedDay && daysArray.length > 0) {
         setSelectedDay(1);
