@@ -488,12 +488,86 @@ export const getActivitiesByReportId = (reportId: number): Activity[] => {
 export const getReportsStats = () => {
   // Total counts
   const totalReports = reportsData.length;
+  
+  // Calculate from previous period (consider last 7 days as current period and 7 days before that as previous period)
+  const now = new Date();
+  const lastWeekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const previousWeekStart = new Date(lastWeekStart.getTime() - 7 * 24 * 60 * 60 * 1000);
+  
+  const currentPeriodReports = reportsData.filter(r => 
+    new Date(r.createdAt) >= lastWeekStart && new Date(r.createdAt) <= now
+  );
+  
+  const previousPeriodReports = reportsData.filter(r => 
+    new Date(r.createdAt) >= previousWeekStart && new Date(r.createdAt) < lastWeekStart
+  );
+  
+  // Current period counts
   const openIssues = reportsData.filter(r => r.status === "Open").length;
   const inProgressIssues = reportsData.filter(r => r.status === "In Progress").length;
   const resolvedIssues = reportsData.filter(r => r.status === "Resolved").length;
   
-  // Calculate average response time (just a mock calculation for now)
-  const averageResponse = "1.8 days";
+  // Previous period counts
+  const previousPeriodOpenIssues = previousPeriodReports.filter(r => r.status === "Open").length;
+  const previousPeriodInProgressIssues = previousPeriodReports.filter(r => r.status === "In Progress").length;
+  const previousPeriodResolvedIssues = previousPeriodReports.filter(r => r.status === "Resolved").length;
+  const previousPeriodTotalReports = previousPeriodReports.length;
+  
+  // Calculate percentage changes
+  const calculatePercentageChange = (current: number, previous: number): {value: string, positive: boolean} => {
+    if (previous === 0) return { value: "N/A", positive: current > 0 };
+    
+    const change = ((current - previous) / previous) * 100;
+    return { 
+      value: `${Math.abs(change).toFixed(1)}%`, 
+      positive: change >= 0 
+    };
+  };
+  
+  // Calculate average response time
+  const calcAverageResponseTime = (reports: Report[]): string => {
+    // For this example, we'll assume response time is between 1-5 days
+    // In a real app, you'd calculate this from the timestamps of status changes
+    const totalDays = reports.reduce((sum, report) => {
+      // Random response time between 1-5 days for this example
+      const responseTime = (report.id % 5) + 1;
+      return sum + responseTime;
+    }, 0);
+    
+    return reports.length > 0 
+      ? `${(totalDays / reports.length).toFixed(1)} days`
+      : "0 days";
+  };
+  
+  const currentAvgResponse = calcAverageResponseTime(currentPeriodReports);
+  const previousAvgResponse = calcAverageResponseTime(previousPeriodReports);
+  
+  // Extract just the number from the string (e.g., "1.5 days" -> 1.5)
+  const currentAvgDays = parseFloat(currentAvgResponse.split(" ")[0]) || 0;
+  const previousAvgDays = parseFloat(previousAvgResponse.split(" ")[0]) || 0;
+  
+  // Calculate change in average response time
+  const avgResponseChange = {
+    value: `${Math.abs(currentAvgDays - previousAvgDays).toFixed(1)} days`,
+    // Lower response time is better (positive)
+    positive: currentAvgDays <= previousAvgDays
+  };
+  
+  // Calculate changes
+  const totalReportsChange = calculatePercentageChange(
+    currentPeriodReports.length, 
+    previousPeriodTotalReports
+  );
+  
+  const openIssuesChange = calculatePercentageChange(
+    openIssues,
+    previousPeriodOpenIssues
+  );
+  
+  const resolvedIssuesChange = calculatePercentageChange(
+    resolvedIssues,
+    previousPeriodResolvedIssues
+  );
   
   // Calculate reports by category
   const categories: Record<string, number> = {};
@@ -505,7 +579,7 @@ export const getReportsStats = () => {
     .map(([name, value]) => ({ name, value }))
     .sort((a, b) => b.value - a.value); // Sort by count descending
   
-  // Generate monthly data with more realistic values based on our sample data
+  // Generate monthly data
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const currentMonth = new Date().getMonth();
   
@@ -553,7 +627,11 @@ export const getReportsStats = () => {
     openIssues,
     inProgressIssues,
     resolvedIssues,
-    averageResponse,
+    averageResponse: currentAvgResponse,
+    totalReportsChange,
+    openIssuesChange,
+    resolvedIssuesChange,
+    averageResponseChange: avgResponseChange,
     reportsByCategory,
     reportsByMonth,
     recentActivities,

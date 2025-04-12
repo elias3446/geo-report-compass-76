@@ -56,7 +56,7 @@ const getReportIcon = (status: string) => {
   }
 };
 
-// Mock locations for sample reports
+// Expanded list of sample locations to support more reports
 const sampleLocations: Record<string, [number, number]> = {
   "Av. Reforma 123": [19.4326, -99.1332],
   "Calle 16 de Septiembre": [19.4328, -99.1386],
@@ -68,6 +68,38 @@ const sampleLocations: Record<string, [number, number]> = {
   "Polanco": [19.4284, -99.1907],
   "Condesa": [19.4128, -99.1732],
   "Roma Norte": [19.4195, -99.1599],
+  "Coyoacán": [19.3429, -99.1609],
+  "Santa Fe": [19.3659, -99.2873],
+  "Xochimilco": [19.2571, -99.1050],
+  "Zócalo": [19.4326, -99.1332],
+  "Alameda Central": [19.4362, -99.1443],
+  "Bellas Artes": [19.4352, -99.1413],
+  "Plaza Garibaldi": [19.4396, -99.1386],
+  "Torre Latinoamericana": [19.4339, -99.1406],
+  "Universidad Nacional": [19.3324, -99.1868],
+  "Perisur": [19.3031, -99.1914],
+  "Aeropuerto": [19.4360, -99.0719],
+  "Estadio Azteca": [19.3031, -99.1504],
+  "Basílica de Guadalupe": [19.4849, -99.1177],
+  "Six Flags": [19.2957, -99.2159],
+  "Teotihuacán": [19.6926, -98.8444]
+};
+
+// Helper function to generate coordinates for locations not in our predefined list
+const generateRandomCoordinates = (locationName: string): [number, number] => {
+  // Use location name to generate a deterministic position based on hash
+  const hash = locationName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  
+  // Create a position within Mexico City area (approximately)
+  const baseLat = 19.4;
+  const baseLng = -99.15;
+  const latOffset = (hash % 200) / 1000; // +/- 0.2 degrees
+  const lngOffset = ((hash * 13) % 200) / 1000;
+  
+  return [
+    baseLat + latOffset - 0.1,
+    baseLng + lngOffset - 0.1
+  ];
 };
 
 // Default location (Mexico City)
@@ -225,9 +257,14 @@ const MapView = ({
     isStandalone
   ]);
 
-  // Get coordinates for each report
+  // Get coordinates for each report - enhanced to dynamically generate coordinates if not found
   const getCoordinates = (location: string): [number, number] => {
-    return sampleLocations[location] || defaultCenter;
+    if (location in sampleLocations) {
+      return sampleLocations[location];
+    }
+    
+    // Generate deterministic coordinates for unknown locations
+    return generateRandomCoordinates(location);
   };
 
   // Export reports to CSV
@@ -321,21 +358,14 @@ const MapView = ({
     };
   }, [filteredReports]);
 
-  // Log the filtered reports for debugging
+  // Log information about the displayed reports
   useEffect(() => {
-    if (isStandalone) {
-      console.log(`Standalone map showing ${filteredReports.length} reports with filter: ${filterStatus || 'all'}`);
-    } else {
-      console.log(`Dashboard map showing ${filteredReports.length} reports for ${timeFrame} view with year=${selectedYear}, month=${selectedMonth}, day=${selectedDay}`);
-      console.log('Status filters:', { showOpenReports, showInProgressReports, showClosedReports });
-      
-      if (selectedCategories && selectedCategories.length > 0) {
-        console.log(`Multiple categories filter applied: ${selectedCategories.join(', ')}`);
-      } else if (selectedCategory) {
-        console.log(`Category filter applied: ${selectedCategory}`);
-      }
-    }
-  }, [filteredReports, timeFrame, selectedYear, selectedMonth, selectedDay, showOpenReports, showInProgressReports, showClosedReports, selectedCategory, selectedCategories, isStandalone, filterStatus]);
+    console.log(`Map showing ${filteredReports.length} reports out of ${reports.length} total`);
+    
+    // Log the locations that are being displayed on the map
+    const locations = filteredReports.map(report => report.location);
+    console.log("Locations being displayed:", [...new Set(locations)]);
+  }, [filteredReports, reports]);
 
   return (
     <div style={{ height, width: "100%" }}>

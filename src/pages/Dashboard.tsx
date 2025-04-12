@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useReports } from '@/contexts/ReportContext';
@@ -43,6 +44,10 @@ const Dashboard = () => {
     inProgressIssues: 0,
     resolvedIssues: 0,
     averageResponse: "0 days",
+    totalReportsChange: { value: "0%", positive: true },
+    openIssuesChange: { value: "0%", positive: false },
+    resolvedIssuesChange: { value: "0%", positive: true },
+    averageResponseChange: { value: "0 days", positive: true }
   });
   
   useEffect(() => {
@@ -54,6 +59,10 @@ const Dashboard = () => {
       inProgressIssues: stats.inProgressIssues,
       resolvedIssues: stats.resolvedIssues,
       averageResponse: stats.averageResponse,
+      totalReportsChange: stats.totalReportsChange || { value: "12%", positive: true },
+      openIssuesChange: stats.openIssuesChange || { value: "5%", positive: false },
+      resolvedIssuesChange: stats.resolvedIssuesChange || { value: "18%", positive: true },
+      averageResponseChange: stats.averageResponseChange || { value: "0.5 days", positive: true }
     });
   }, []);
   
@@ -95,7 +104,7 @@ const Dashboard = () => {
     toggleCategory(category);
   };
   
-  // Fixed fill function for the bar chart that returns a string instead of a function
+  // Fixed fill function for the bar chart that returns a string
   const getBarFill = (entry: any) => {
     return selectedCategories.includes(entry.category) ? "#1E40AF" : "#2196F3";
   };
@@ -120,33 +129,33 @@ const Dashboard = () => {
         <StatCard 
           title="Total Reports" 
           value={statsData.totalReports.toString()} 
-          description="All reports in the system" 
+          description="All time submitted reports" 
           icon={FileText}
-          change={{ value: "12%", positive: true }}
+          change={statsData.totalReportsChange}
         />
         <StatCard 
           title="Open Issues" 
           value={statsData.openIssues.toString()} 
-          description="Reports needing attention" 
+          description="Pending resolution" 
           icon={AlertTriangle}
           iconColor="text-yellow-500"
-          change={{ value: "5%", positive: false }}
+          change={statsData.openIssuesChange}
         />
         <StatCard 
           title="Resolved Issues" 
           value={statsData.resolvedIssues.toString()} 
-          description="Successfully closed reports" 
+          description="Successfully addressed" 
           icon={CheckCircle2}
           iconColor="text-green-500"
-          change={{ value: "18%", positive: true }}
+          change={statsData.resolvedIssuesChange}
         />
         <StatCard 
           title="Average Response" 
           value={statsData.averageResponse} 
-          description="Time to resolve reports" 
+          description="Time to first action" 
           icon={Clock}
           iconColor="text-blue-500"
-          change={{ value: "0.5 days", positive: true }}
+          change={statsData.averageResponseChange}
         />
       </div>
       

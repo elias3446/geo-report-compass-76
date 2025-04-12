@@ -20,6 +20,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Skeleton } from '@/components/ui/skeleton';
 
 const MapView = () => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -30,6 +31,15 @@ const MapView = () => {
   const [selectedReport, setSelectedReport] = useState<GeoReport | null>(null);
   const [mapCenter, setMapCenter] = useState({ x: 50, y: 50 });
   const [mapZoom, setMapZoom] = useState(1);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Simulate loading
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 800);
+    return () => clearTimeout(timer);
+  }, []);
 
   const handlePinClick = (report: GeoReport) => {
     setSelectedReport(report);
@@ -140,6 +150,21 @@ const MapView = () => {
     };
   }, [reports]);
 
+  // Log diagnostic information about reports
+  useEffect(() => {
+    console.log(`Custom MapView component displaying ${reports.length} total reports`);
+  }, [reports]);
+
+  if (isLoading) {
+    return (
+      <div className="relative w-full h-[600px] overflow-hidden rounded-lg border border-border bg-card p-4">
+        <Skeleton className="absolute top-4 right-4 h-8 w-32" />
+        <Skeleton className="absolute bottom-4 right-4 h-32 w-32" />
+        <Skeleton className="w-full h-full" />
+      </div>
+    );
+  }
+
   return (
     <div className="relative w-full h-[600px] overflow-hidden rounded-lg border border-border bg-card">
       <div className="absolute top-4 right-4 z-10 flex flex-col gap-2">
@@ -220,8 +245,9 @@ const MapView = () => {
         }}
       >
         {reports.map(report => {
-          const pinLeft = ((report.location.lng + 180) / 360) * 100;
-          const pinTop = ((90 - report.location.lat) / 180) * 100;
+          // Ensure we show all reports with proper positioning
+          const pinLeft = ((Number(report.location.lng) + 180) / 360) * 100;
+          const pinTop = ((90 - Number(report.location.lat)) / 180) * 100;
           
           return (
             <TooltipProvider key={report.id}>

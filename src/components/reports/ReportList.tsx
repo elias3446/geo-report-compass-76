@@ -8,7 +8,8 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table";
-import {
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { 
   Card,
   CardContent,
   CardDescription,
@@ -59,43 +60,27 @@ const ReportList = () => {
     
     let filteredReports = [...reportData];
     
-    // Apply status filter if selected
     if (statusFilter) {
       filteredReports = filteredReports.filter(report => report.status === statusFilter);
     }
     
-    // Apply category filters if selected
     if (selectedCategories && selectedCategories.length > 0) {
       filteredReports = filteredReports.filter(report => 
         selectedCategories.includes(report.category)
       );
     }
     
-    // Apply free text search across all fields
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase().trim();
       
       filteredReports = filteredReports.filter(report => {
-        // Search in title
         if (report.title.toLowerCase().includes(query)) return true;
-        
-        // Search in category
         if (report.category.toLowerCase().includes(query)) return true;
-        
-        // Search in status
         if (report.status.toLowerCase().includes(query)) return true;
-        
-        // Search in priority
         if (report.priority.toLowerCase().includes(query)) return true;
-        
-        // Search in location
         if (report.location.toLowerCase().includes(query)) return true;
-        
-        // Search in date (partial match)
         const reportDate = new Date(report.createdAt).toISOString().split('T')[0];
         if (reportDate.includes(query)) return true;
-        
-        // If date string representation (Apr 10, 2025) includes the query
         const dateOptions = { 
           year: 'numeric' as const, 
           month: 'short' as const, 
@@ -104,15 +89,11 @@ const ReportList = () => {
         const formattedDate = new Date(report.createdAt)
           .toLocaleDateString('es-MX', dateOptions)
           .toLowerCase();
-          
         if (formattedDate.includes(query)) return true;
-        
-        // Not found in any field
         return false;
       });
     }
     
-    // Apply sorting if configured
     if (sortConfig) {
       filteredReports.sort((a, b) => {
         if (a[sortConfig.key] < b[sortConfig.key]) {
@@ -165,7 +146,6 @@ const ReportList = () => {
     setStatusFilter(null);
     setSortConfig(null);
     if (selectedCategories && selectedCategories.length > 0) {
-      // Clear all selected categories
       selectedCategories.forEach(category => toggleCategory(category));
     }
     toast("All filters cleared");
@@ -206,10 +186,8 @@ const ReportList = () => {
     }).format(date);
   };
 
-  // Fixed export function to properly handle CSV generation and download
   const handleExportReports = () => {
     try {
-      // Make sure we have reports to export
       if (reports.length === 0) {
         toast("Nothing to export", {
           description: "There are no reports matching your current filters."
@@ -217,10 +195,8 @@ const ReportList = () => {
         return;
       }
       
-      // Define the CSV header
       const headers = ['ID', 'Title', 'Category', 'Status', 'Priority', 'Location', 'Assigned To', 'Created At'];
       
-      // Convert reports data to CSV format
       const reportsCsv = reports.map(report => [
         report.id,
         report.title,
@@ -232,33 +208,21 @@ const ReportList = () => {
         formatDate(report.createdAt)
       ]);
       
-      // Add headers to the beginning of the array
       reportsCsv.unshift(headers);
       
-      // Convert to CSV string (escape commas in fields and handle quotes)
       const csvContent = reportsCsv.map(row => 
         row.map(field => {
-          // If the field contains commas, quotes, or newlines, wrap it in quotes
-          const stringField = String(field);
-          if (stringField.includes(',') || stringField.includes('"') || stringField.includes('\n')) {
-            // Replace double quotes with two double quotes to escape them
-            return `"${stringField.replace(/"/g, '""')}"`;
+          if (String(field).includes(',') || String(field).includes('"') || String(field).includes('\n')) {
+            return `"${String(field).replace(/"/g, '""')}"`;
           }
-          return stringField;
+          return String(field);
         }).join(',')
       ).join('\n');
       
-      // Create a Blob with the CSV data and specify UTF-8 encoding
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       
-      // Create a temporary URL for the Blob
       const url = URL.createObjectURL(blob);
       
-      // Create a link element and trigger download
-      const link = document.createElement('a');
-      link.href = url;
-      
-      // Generate a filename based on current filters
       let filename = 'reports';
       if (statusFilter) {
         filename += `_${statusFilter.toLowerCase().replace(/\s+/g, '_')}`;
@@ -268,19 +232,18 @@ const ReportList = () => {
       }
       filename += `_${new Date().toISOString().split('T')[0]}.csv`;
       
+      const link = document.createElement('a');
+      link.href = url;
       link.setAttribute('download', filename);
       document.body.appendChild(link);
       link.click();
       
-      // Clean up
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
       
-      // Show a success toast notification
       toast("Export successful", {
         description: `${reports.length} reports exported to CSV`
       });
-      
     } catch (error) {
       console.error("Export error:", error);
       toast("Export failed", {
@@ -450,80 +413,82 @@ const ReportList = () => {
           </div>
         </div>
         <div className="rounded-md border overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead onClick={() => handleSort('title')} className="cursor-pointer">
-                  <div className="flex items-center">
-                    Title
-                    <ArrowUpDown className="ml-2 h-4 w-4" />
-                  </div>
-                </TableHead>
-                <TableHead onClick={() => handleSort('category')} className="hidden md:table-cell cursor-pointer">
-                  <div className="flex items-center">
-                    Category
-                    <ArrowUpDown className="ml-2 h-4 w-4" />
-                  </div>
-                </TableHead>
-                <TableHead onClick={() => handleSort('status')} className="cursor-pointer">
-                  <div className="flex items-center">
-                    Status
-                    <ArrowUpDown className="ml-2 h-4 w-4" />
-                  </div>
-                </TableHead>
-                <TableHead onClick={() => handleSort('priority')} className="hidden md:table-cell cursor-pointer">
-                  <div className="flex items-center">
-                    Priority
-                    <ArrowUpDown className="ml-2 h-4 w-4" />
-                  </div>
-                </TableHead>
-                <TableHead onClick={() => handleSort('location')} className="hidden lg:table-cell cursor-pointer">
-                  <div className="flex items-center">
-                    Location
-                    <ArrowUpDown className="ml-2 h-4 w-4" />
-                  </div>
-                </TableHead>
-                <TableHead onClick={() => handleSort('createdAt')} className="hidden lg:table-cell cursor-pointer">
-                  <div className="flex items-center">
-                    Date
-                    <ArrowUpDown className="ml-2 h-4 w-4" />
-                  </div>
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {reports.length > 0 ? (
-                reports.map((report) => (
-                  <TableRow key={report.id}>
-                    <TableCell className="font-medium">
-                      <Link to={`/reports/${report.id}`} className="hover:underline">
-                        {report.title}
-                      </Link>
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell">{report.category}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className={getStatusColor(report.status)}>
-                        {report.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell">
-                      <Badge variant="outline" className={getPriorityColor(report.priority)}>
-                        {report.priority}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="hidden lg:table-cell">{report.location}</TableCell>
-                    <TableCell className="hidden lg:table-cell">{formatDate(report.createdAt)}</TableCell>
-                  </TableRow>
-                ))
-              ) : (
+          <ScrollArea className="h-[calc(100vh-20rem)] pr-4">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={6} className="h-24 text-center">
-                    No reports found
-                  </TableCell>
+                  <TableHead onClick={() => handleSort('title')} className="cursor-pointer">
+                    <div className="flex items-center">
+                      Title
+                      <ArrowUpDown className="ml-2 h-4 w-4" />
+                    </div>
+                  </TableHead>
+                  <TableHead onClick={() => handleSort('category')} className="hidden md:table-cell cursor-pointer">
+                    <div className="flex items-center">
+                      Category
+                      <ArrowUpDown className="ml-2 h-4 w-4" />
+                    </div>
+                  </TableHead>
+                  <TableHead onClick={() => handleSort('status')} className="cursor-pointer">
+                    <div className="flex items-center">
+                      Status
+                      <ArrowUpDown className="ml-2 h-4 w-4" />
+                    </div>
+                  </TableHead>
+                  <TableHead onClick={() => handleSort('priority')} className="hidden md:table-cell cursor-pointer">
+                    <div className="flex items-center">
+                      Priority
+                      <ArrowUpDown className="ml-2 h-4 w-4" />
+                    </div>
+                  </TableHead>
+                  <TableHead onClick={() => handleSort('location')} className="hidden lg:table-cell cursor-pointer">
+                    <div className="flex items-center">
+                      Location
+                      <ArrowUpDown className="ml-2 h-4 w-4" />
+                    </div>
+                  </TableHead>
+                  <TableHead onClick={() => handleSort('createdAt')} className="hidden lg:table-cell cursor-pointer">
+                    <div className="flex items-center">
+                      Date
+                      <ArrowUpDown className="ml-2 h-4 w-4" />
+                    </div>
+                  </TableHead>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {reports.length > 0 ? (
+                  reports.map((report) => (
+                    <TableRow key={report.id}>
+                      <TableCell className="font-medium">
+                        <Link to={`/reports/${report.id}`} className="hover:underline">
+                          {report.title}
+                        </Link>
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell">{report.category}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={getStatusColor(report.status)}>
+                          {report.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        <Badge variant="outline" className={getPriorityColor(report.priority)}>
+                          {report.priority}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell">{report.location}</TableCell>
+                      <TableCell className="hidden lg:table-cell">{formatDate(report.createdAt)}</TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={6} className="h-24 text-center">
+                      No reports found
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </ScrollArea>
         </div>
       </CardContent>
     </Card>
