@@ -4,6 +4,7 @@ import { MapContainer, TileLayer, useMap, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useMapReports } from './hooks/useMapReports';
 import ReportMarker from './ui/ReportMarker';
+import { toast } from 'sonner';
 
 // Fix for Leaflet icon issues in React
 import './icons/fixLeafletIcon';
@@ -49,7 +50,7 @@ const MapView: React.FC<MapViewProps> = ({
   timeFilters,
   selectedCategories = []
 }) => {
-  const { filteredReports } = useMapReports({ 
+  const { filteredReports, reports } = useMapReports({ 
     filterStatus, 
     categoryOnly, 
     isStandalone,

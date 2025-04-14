@@ -274,26 +274,95 @@ export const useDashboardData = () => {
 
   const handleExportLocationData = () => {
     try {
-      const exportEvent = new CustomEvent('export-map-data', {
-        detail: {
-          filterType: activeReportTab === 'categories' ? 'category' : 'timeframe',
-          categories: selectedCategories,
-          timeFrame: timeFrame,
-          year: selectedYear,
-          month: selectedMonth,
-          day: selectedDay
+      // Get filtered reports based on current filters
+      let filtered = [...allReports];
+      
+      if (activeReportTab === 'categories' && selectedCategories.length > 0) {
+        filtered = filtered.filter(report => selectedCategories.includes(report.category));
+      } else {
+        // Filter by time period
+        if (selectedYear) {
+          filtered = filtered.filter(report => {
+            const reportDate = new Date(report.createdAt);
+            return reportDate.getFullYear() === selectedYear;
+          });
         }
-      });
+
+        if ((timeFrame === "month" || timeFrame === "week") && selectedMonth !== undefined) {
+          filtered = filtered.filter(report => {
+            const reportDate = new Date(report.createdAt);
+            return reportDate.getMonth() === selectedMonth;
+          });
+        } else if (timeFrame === "day" && selectedMonth !== undefined && selectedDay !== undefined) {
+          filtered = filtered.filter(report => {
+            const reportDate = new Date(report.createdAt);
+            return reportDate.getMonth() === selectedMonth && 
+                  reportDate.getDate() === selectedDay;
+          });
+        }
+        
+        // Apply status filters
+        filtered = filtered.filter(report => {
+          if (report.status === "Open" && showOpenReports) return true;
+          if (report.status === "In Progress" && showInProgressReports) return true;
+          if (report.status === "Resolved" && showClosedReports) return true;
+          return false;
+        });
+      }
       
-      document.dispatchEvent(exportEvent);
+      // Create exportable data
+      const data = filtered.map(report => ({
+        id: report.id,
+        title: report.title,
+        status: report.status,
+        category: report.category,
+        date: report.createdAt,
+        location: report.location,
+        tags: report.tags || []
+      }));
       
-      toast.success('Exportando datos de ubicaciones', {
-        description: `Los datos se están filtrando según: ${activeReportTab === 'categories' ? 'Categorías seleccionadas' : 'Periodo de tiempo seleccionado'}`
+      if (data.length === 0) {
+        toast.info("No data to export", {
+          description: "There are no map locations matching your current filters."
+        });
+        return;
+      }
+      
+      const replacer = (key: string, value: any) => value === null ? '' : value;
+      const header = Object.keys(data[0] || {});
+      const csv = [
+        header.join(','),
+        ...data.map(row => header.map(fieldName => {
+          if (fieldName === 'location') {
+            return JSON.stringify(row[fieldName]).replace(/"/g, '""');
+          }
+          if (fieldName === 'tags') {
+            return `"${(row[fieldName] || []).join(';')}"`;
+          }
+          return JSON.stringify(row[fieldName], replacer).replace(/"/g, '""');
+        }).join(','))
+      ].join('\r\n');
+      
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      
+      const filename = `map-locations-${activeReportTab === 'categories' ? 'by-category' : 'by-timeframe'}_${new Date().toISOString().slice(0, 10)}.csv`;
+      
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      toast.success('Export successful', {
+        description: `${data.length} report locations exported to CSV`
       });
     } catch (error) {
       console.error("Export error:", error);
       toast.error("Export failed", {
-        description: "There was an error triggering the export. Please try again."
+        description: "There was an error exporting the map data. Please try again."
       });
     }
   };

@@ -12,6 +12,9 @@ import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 import MapView from "@/components/map/MapView";
 import { useTimeFilter } from "@/context/TimeFilterContext";
+import { exportReportsToCSV } from "@/components/map/utils/ExportUtils";
+import { getReports } from "@/services/reportService";
+import { toast } from "sonner";
 
 interface MapSectionProps {
   selectedCategories: string[];

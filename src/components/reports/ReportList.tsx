@@ -253,6 +253,7 @@ const ReportList = () => {
     }).format(date);
   };
 
+  // Export reports to CSV
   const handleExportReports = () => {
     try {
       if (reports.length === 0) {

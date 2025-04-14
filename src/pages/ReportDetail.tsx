@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import AppLayout from "@/components/layout/AppLayout";
@@ -12,10 +13,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, MapPin, Clock, User, Edit, AlertCircle } from "lucide-react";
-import { getReports, updateReport, Report, getActivitiesByReportId, Activity } from "@/services/reportService";
+import { getReports, updateReport, getActivitiesByReportId } from "@/services/reportService";
 import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import SingleReportMap from "@/components/map/ui/SingleReportMap";
+import type { Report, Activity } from "@/services/reportService";
 
 const ReportDetail = () => {
   const { id } = useParams();
@@ -271,7 +273,7 @@ const ReportDetail = () => {
               <CardTitle>Report Activity</CardTitle>
             </CardHeader>
             <CardContent>
-              <ScrollArea className="h-[150px] pr-4">
+              <ScrollArea className="h-[100px] pr-4">
                 <div className="space-y-3">
                   {activities.length > 0 ? (
                     activities.map((activity) => (
