@@ -50,10 +50,49 @@ export const defaultCenter: [number, number] = [19.4326, -99.1332];
 
 // Get coordinates for a location
 export const getCoordinates = (location: string): [number, number] => {
+  if (!location) return defaultCenter;
+  
+  // First check if it's already in lat,lng format from an edited location
+  const coordsRegex = /^(-?\d+(\.\d+)?),\s*(-?\d+(\.\d+)?)\s*(\(.*\))?$/;
+  const match = location.match(coordsRegex);
+  
+  if (match) {
+    // Location is in format "lat,lng (locationName)" or just "lat,lng"
+    const lat = parseFloat(match[1]);
+    const lng = parseFloat(match[3]);
+    if (!isNaN(lat) && !isNaN(lng)) {
+      console.log("Extracted coordinates from location string:", [lat, lng]);
+      return [lat, lng];
+    }
+  }
+  
+  // Try to extract coordinates from any string containing lat/lng
+  const anyNumbersRegex = /(-?\d+(\.\d+)?),\s*(-?\d+(\.\d+)?)/;
+  const numbersMatch = location.match(anyNumbersRegex);
+  
+  if (numbersMatch) {
+    const lat = parseFloat(numbersMatch[1]);
+    const lng = parseFloat(numbersMatch[3]);
+    if (!isNaN(lat) && !isNaN(lng)) {
+      console.log("Extracted coordinates from partial match:", [lat, lng]);
+      return [lat, lng];
+    }
+  }
+  
+  // Check if it's in predefined locations
   if (location in sampleLocations) {
+    console.log("Found location in predefined locations:", location);
     return sampleLocations[location];
   }
   
+  // Extract just the location name if it's in parentheses
+  const nameMatch = location.match(/\(([^)]+)\)/);
+  if (nameMatch && nameMatch[1] && sampleLocations[nameMatch[1]]) {
+    console.log("Found location name in parentheses:", nameMatch[1]);
+    return sampleLocations[nameMatch[1]];
+  }
+  
   // Generate deterministic coordinates for unknown locations
+  console.log("Generating coordinates for unknown location:", location);
   return generateRandomCoordinates(location);
 };

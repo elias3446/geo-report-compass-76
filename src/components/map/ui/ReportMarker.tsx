@@ -31,8 +31,18 @@ const ReportMarker: React.FC<ReportMarkerProps> = ({ report, index }) => {
       return report.coordinates;
     }
     
-    // Use LocationUtils to get coordinates for common locations
+    // Try to extract coordinates if location is in format "lat, lng (name)"
     if (report.location) {
+      const coordsMatch = report.location.match(/^(-?\d+(\.\d+)?),\s*(-?\d+(\.\d+)?)\s*\(/);
+      if (coordsMatch) {
+        const lat = parseFloat(coordsMatch[1]);
+        const lng = parseFloat(coordsMatch[3]);
+        if (!isNaN(lat) && !isNaN(lng)) {
+          return [lat, lng];
+        }
+      }
+      
+      // Otherwise use LocationUtils to get coordinates for common locations
       return getCoordinates(report.location);
     }
     

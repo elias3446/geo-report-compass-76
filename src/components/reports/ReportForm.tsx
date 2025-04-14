@@ -24,6 +24,7 @@ import { toast } from "sonner";
 import { Map, Loader2, ImagePlus } from "lucide-react";
 import MapView from "@/components/map/MapView";
 import { addReport, updateReport } from "@/services/reportService";
+import EditableLocationMap from '@/components/map/ui/EditableLocationMap';
 
 interface FormData {
   title: string;
@@ -54,7 +55,6 @@ const ReportForm = ({ onSubmit, isEditing = false, initialData }: ReportFormProp
   });
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
 
-  // Initialize form data if editing an existing report
   useEffect(() => {
     if (isEditing && initialData) {
       setFormData({
@@ -89,7 +89,6 @@ const ReportForm = ({ onSubmit, isEditing = false, initialData }: ReportFormProp
     const newImages = [...formData.images, ...files];
     setFormData(prev => ({ ...prev, images: newImages }));
 
-    // Create preview URLs
     const newPreviewUrls = files.map(file => URL.createObjectURL(file));
     setPreviewUrls(prev => [...prev, ...newPreviewUrls]);
   };
@@ -104,11 +103,41 @@ const ReportForm = ({ onSubmit, isEditing = false, initialData }: ReportFormProp
     toast.success("Image removed");
   };
 
+  const handleLocationMapChange = (lat: number, lng: number, locationName?: string) => {
+    let formattedLocationName = locationName || 'Ubicación personalizada';
+    
+    // If we don't have a new location name from the API, try to preserve the existing one
+    if (!locationName) {
+      const nameMatch = formData.location.match(/\(([^)]+)\)/);
+      if (nameMatch && nameMatch[1]) {
+        formattedLocationName = nameMatch[1];
+      } else if (formData.location && !formData.location.includes(',')) {
+        formattedLocationName = formData.location;
+      }
+    }
+    
+    const newLocation = `${lat.toFixed(6)}, ${lng.toFixed(6)} (${formattedLocationName})`;
+    
+    console.log("Location updated via map:", newLocation);
+    
+    setFormData(prev => ({
+      ...prev,
+      location: newLocation
+    }));
+    
+    // Refresh map if it's shown
+    if (showMap) {
+      setTimeout(() => {
+        setShowMap(false);
+        setTimeout(() => setShowMap(true), 50);
+      }, 50);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    // Validate form
     if (!formData.title || !formData.category || !formData.priority || !formData.location) {
       toast.error("Please fill in all required fields");
       setIsSubmitting(false);
@@ -116,7 +145,6 @@ const ReportForm = ({ onSubmit, isEditing = false, initialData }: ReportFormProp
     }
 
     if (isEditing && initialData) {
-      // Update the report
       const updatedReport = updateReport(initialData.id, {
         title: formData.title,
         description: formData.description || "",
@@ -136,20 +164,18 @@ const ReportForm = ({ onSubmit, isEditing = false, initialData }: ReportFormProp
         setIsSubmitting(false);
       }
     } else {
-      // Add new report
       const newReport = addReport({
         title: formData.title,
         description: formData.description || "",
         category: formData.category,
-        status: "Open", // Default status for new reports
+        status: "Open",
         priority: formData.priority,
         location: formData.location,
-        assignedTo: "Unassigned", // Default assignee
+        assignedTo: "Unassigned",
       });
 
       console.log("Form submitted:", newReport);
       
-      // Call the onSubmit callback if provided
       if (onSubmit) {
         onSubmit(newReport);
       }
@@ -158,6 +184,20 @@ const ReportForm = ({ onSubmit, isEditing = false, initialData }: ReportFormProp
       setIsSubmitting(false);
       navigate("/reports");
     }
+  };
+
+  // Function to extract and display location information for the interface
+  const getDisplayLocation = () => {
+    if (!formData.location) return "";
+    
+    // Try to extract the location name from the parentheses
+    const nameMatch = formData.location.match(/\(([^)]+)\)/);
+    if (nameMatch && nameMatch[1]) {
+      return nameMatch[1];
+    }
+    
+    // If no name in parentheses, just return the full string
+    return formData.location;
   };
 
   return (
@@ -245,14 +285,29 @@ const ReportForm = ({ onSubmit, isEditing = false, initialData }: ReportFormProp
                     <Map className="h-4 w-4" />
                   </Button>
                 </div>
+                {formData.location && (
+                  <div className="flex flex-col">
+                    <p className="text-sm font-medium mt-1">
+                      {getDisplayLocation()}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {formData.location.includes(',') 
+                        ? `Coordenadas: ${formData.location.split('(')[0].trim()}`
+                        : ''}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
 
             {showMap && (
               <div className="mt-4">
-                <MapView />
+                <EditableLocationMap
+                  location={formData.location}
+                  onLocationChange={handleLocationMapChange}
+                />
                 <p className="text-xs text-muted-foreground mt-2">
-                  Click on the map to select a precise location
+                  Arrastra el marcador para actualizar la ubicación exacta y obtener información de la dirección
                 </p>
               </div>
             )}

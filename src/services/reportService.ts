@@ -434,12 +434,24 @@ export const updateReport = (id: number, updates: Partial<Report>): Report | nul
   }
   
   if (updates.location && updates.location !== originalReport.location) {
+    // Extract the human-readable part of the location from coordinates format
+    let displayLocation = updates.location;
+    const locationMatch = updates.location.match(/\(([^)]+)\)/);
+    if (locationMatch && locationMatch[1]) {
+      displayLocation = locationMatch[1];
+    }
+    
     addActivity({
       type: "location_changed",
       title: "Location updated",
-      description: `${updatedReport.title} location changed to ${updates.location}`,
+      description: `${updatedReport.title} location changed to ${displayLocation}`,
       relatedReportId: id,
       createdAt: new Date().toISOString(),
+    });
+    
+    console.log("Report location updated:", {
+      from: originalReport.location,
+      to: updates.location
     });
   }
   
