@@ -53,18 +53,22 @@ const LocationList = ({ reports }: LocationListProps) => {
   };
   
   const getLocationInfo = (report: Report | GeoReport) => {
-    if (report && report.location && typeof report.location === 'object') {
-      // Log the location data for debugging
-      console.log('Report location data:', report.location);
-      
-      return {
-        name: report.location.name || "Unknown location",
-        lat: typeof report.location.lat === 'number' ? report.location.lat : 0,
-        lng: typeof report.location.lng === 'number' ? report.location.lng : 0
-      };
+    // Debug the report structure
+    console.log('Processing report:', report.id, report.title);
+    console.log('Location data:', report.location);
+    
+    if (!report.location) {
+      console.error('No location data found for report:', report.id);
+      return { name: "Unknown location", lat: 0, lng: 0 };
     }
     
-    return { name: "Unknown location", lat: 0, lng: 0 };
+    // Extract location info with proper type checking
+    const locationName = report.location.name || "Unknown location";
+    const lat = typeof report.location.lat === 'number' ? report.location.lat : 0;
+    const lng = typeof report.location.lng === 'number' ? report.location.lng : 0;
+    
+    console.log('Extracted location info:', locationName, lat, lng);
+    return { name: locationName, lat, lng };
   };
   
   return (
@@ -104,7 +108,7 @@ const LocationList = ({ reports }: LocationListProps) => {
                       <div className="flex-grow min-w-0">
                         <div className="flex justify-between items-start mb-1">
                           <h4 className="text-sm font-medium truncate">
-                            {locationInfo.name || "Unknown location"}
+                            {locationInfo.name}
                           </h4>
                           <Badge variant="outline" className="ml-2 text-xs">
                             {report.category}
@@ -116,8 +120,8 @@ const LocationList = ({ reports }: LocationListProps) => {
                               {report.title}
                             </p>
                             <div className="flex items-center text-xs text-muted-foreground gap-1">
-                              <span>Lat: {locationInfo.lat !== 0 ? locationInfo.lat.toFixed(2) : "N/A"}</span>
-                              <span>Lng: {locationInfo.lng !== 0 ? locationInfo.lng.toFixed(2) : "N/A"}</span>
+                              <span>Lat: {locationInfo.lat ? locationInfo.lat.toFixed(4) : "N/A"}</span>
+                              <span>Lng: {locationInfo.lng ? locationInfo.lng.toFixed(4) : "N/A"}</span>
                             </div>
                           </div>
                           <ChevronRight className="h-4 w-4 text-muted-foreground ml-1 flex-shrink-0" />
