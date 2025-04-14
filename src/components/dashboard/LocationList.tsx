@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MapPin, ChevronRight } from "lucide-react";
+import { GeoReport } from '@/contexts/ReportContext';
 
 interface Location {
   name: string;
@@ -24,39 +25,41 @@ interface Report {
   title: string;
   status: string;
   category: string;
-  location: Location | string;
+  location: Location;
   createdAt?: string;
 }
 
 interface LocationListProps {
-  reports: Report[];
+  reports: Report[] | GeoReport[];
 }
 
 const LocationList = ({ reports }: LocationListProps) => {
   const getReportStatusColor = (status: string) => {
     switch (status) {
       case "Open":
+      case "draft":
         return "text-red-500";
       case "In Progress":
+      case "submitted":
         return "text-yellow-500";
       case "Resolved":
+      case "approved":
         return "text-green-500";
+      case "rejected":
+        return "text-gray-500";
       default:
         return "text-gray-500";
     }
   };
   
   // Helper function to extract location information
-  const getLocationInfo = (report: Report) => {
-    if (typeof report.location === 'string') {
-      return {
-        name: report.location,
-        lat: null,
-        lng: null
-      };
+  const getLocationInfo = (report: Report | GeoReport) => {
+    // Handle GeoReport type
+    if ('location' in report && typeof report.location === 'object') {
+      return report.location;
     }
     
-    return report.location || { name: "Unknown location", lat: null, lng: null };
+    return { name: "Unknown location", lat: 0, lng: 0 };
   };
   
   return (
@@ -108,8 +111,8 @@ const LocationList = ({ reports }: LocationListProps) => {
                               {report.title}
                             </p>
                             <div className="flex items-center text-xs text-muted-foreground gap-1">
-                              <span>Lat: {locationInfo.lat ? locationInfo.lat.toFixed(2) : "N/A"}</span>
-                              <span>Lng: {locationInfo.lng ? locationInfo.lng.toFixed(2) : "N/A"}</span>
+                              <span>Lat: {locationInfo.lat ? locationInfo.lat.toFixed(2) : "0.00"}</span>
+                              <span>Lng: {locationInfo.lng ? locationInfo.lng.toFixed(2) : "0.00"}</span>
                             </div>
                           </div>
                           <ChevronRight className="h-4 w-4 text-muted-foreground ml-1 flex-shrink-0" />
