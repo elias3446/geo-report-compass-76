@@ -13,16 +13,19 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MapPin, ChevronRight } from "lucide-react";
 
+interface Location {
+  name: string;
+  lat: number;
+  lng: number;
+}
+
 interface Report {
   id: string;
   title: string;
   status: string;
   category: string;
-  location: {
-    name: string;
-    lat: number;
-    lng: number;
-  };
+  location: Location | string;
+  createdAt?: string;
 }
 
 interface LocationListProps {
@@ -41,6 +44,19 @@ const LocationList = ({ reports }: LocationListProps) => {
       default:
         return "text-gray-500";
     }
+  };
+  
+  // Helper function to extract location information
+  const getLocationInfo = (report: Report) => {
+    if (typeof report.location === 'string') {
+      return {
+        name: report.location,
+        lat: null,
+        lng: null
+      };
+    }
+    
+    return report.location || { name: "Unknown location", lat: null, lng: null };
   };
   
   return (
@@ -64,41 +80,45 @@ const LocationList = ({ reports }: LocationListProps) => {
         <ScrollArea className="h-[400px]">
           <div className="divide-y divide-border">
             {reports.length > 0 ? (
-              reports.map((report) => (
-                <Link
-                  key={report.id}
-                  to={`/reports/${report.id}`}
-                  className="block hover:bg-muted/50 transition-colors"
-                >
-                  <div className="p-3 flex items-center gap-3">
-                    <div className={`flex-shrink-0 ${getReportStatusColor(report.status)}`}>
-                      <MapPin className="h-5 w-5" />
-                    </div>
-                    <div className="flex-grow min-w-0">
-                      <div className="flex justify-between items-start mb-1">
-                        <h4 className="text-sm font-medium truncate">
-                          {report.location?.name || "Unknown location"}
-                        </h4>
-                        <Badge variant="outline" className="ml-2 text-xs">
-                          {report.category}
-                        </Badge>
+              reports.map((report) => {
+                const locationInfo = getLocationInfo(report);
+                
+                return (
+                  <Link
+                    key={report.id}
+                    to={`/reports/${report.id}`}
+                    className="block hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="p-3 flex items-center gap-3">
+                      <div className={`flex-shrink-0 ${getReportStatusColor(report.status)}`}>
+                        <MapPin className="h-5 w-5" />
                       </div>
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-xs text-muted-foreground truncate max-w-[180px] mb-1">
-                            {report.title}
-                          </p>
-                          <div className="flex items-center text-xs text-muted-foreground gap-1">
-                            <span>Lat: {report.location?.lat ? report.location.lat.toFixed(2) : "N/A"}</span>
-                            <span>Lng: {report.location?.lng ? report.location.lng.toFixed(2) : "N/A"}</span>
-                          </div>
+                      <div className="flex-grow min-w-0">
+                        <div className="flex justify-between items-start mb-1">
+                          <h4 className="text-sm font-medium truncate">
+                            {locationInfo.name || "Unknown location"}
+                          </h4>
+                          <Badge variant="outline" className="ml-2 text-xs">
+                            {report.category}
+                          </Badge>
                         </div>
-                        <ChevronRight className="h-4 w-4 text-muted-foreground ml-1 flex-shrink-0" />
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-xs text-muted-foreground truncate max-w-[180px] mb-1">
+                              {report.title}
+                            </p>
+                            <div className="flex items-center text-xs text-muted-foreground gap-1">
+                              <span>Lat: {locationInfo.lat ? locationInfo.lat.toFixed(2) : "N/A"}</span>
+                              <span>Lng: {locationInfo.lng ? locationInfo.lng.toFixed(2) : "N/A"}</span>
+                            </div>
+                          </div>
+                          <ChevronRight className="h-4 w-4 text-muted-foreground ml-1 flex-shrink-0" />
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </Link>
-              ))
+                  </Link>
+                );
+              })
             ) : (
               Array.from({ length: 5 }).map((_, index) => (
                 <div key={index} className="p-3 flex items-center gap-3">
