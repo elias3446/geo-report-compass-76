@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { 
@@ -52,11 +51,13 @@ const LocationList = ({ reports }: LocationListProps) => {
     }
   };
   
-  // Helper function to extract location information
   const getLocationInfo = (report: Report | GeoReport) => {
-    // Handle GeoReport type
-    if ('location' in report && typeof report.location === 'object') {
-      return report.location;
+    if (report.location && typeof report.location === 'object') {
+      return {
+        name: report.location.name || "Unknown location",
+        lat: report.location.lat || 0,
+        lng: report.location.lng || 0
+      };
     }
     
     return { name: "Unknown location", lat: 0, lng: 0 };
@@ -111,8 +112,8 @@ const LocationList = ({ reports }: LocationListProps) => {
                               {report.title}
                             </p>
                             <div className="flex items-center text-xs text-muted-foreground gap-1">
-                              <span>Lat: {locationInfo.lat ? locationInfo.lat.toFixed(2) : "0.00"}</span>
-                              <span>Lng: {locationInfo.lng ? locationInfo.lng.toFixed(2) : "0.00"}</span>
+                              <span>Lat: {locationInfo.lat.toFixed(2)}</span>
+                              <span>Lng: {locationInfo.lng.toFixed(2)}</span>
                             </div>
                           </div>
                           <ChevronRight className="h-4 w-4 text-muted-foreground ml-1 flex-shrink-0" />
