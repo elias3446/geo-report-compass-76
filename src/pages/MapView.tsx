@@ -8,7 +8,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FileDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { TimeFilterProvider } from '@/context/TimeFilterContext';
-import { ReportProvider } from '@/contexts/ReportContext';
 
 const MapPage = () => {
   const [activeFilter, setActiveFilter] = useState<string>('all');
@@ -22,51 +21,49 @@ const MapPage = () => {
 
   return (
     <AppLayout>
-      <ReportProvider>
-        <TimeFilterProvider>
-          <div className="space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <h1 className="text-2xl font-bold">Mapa de Reportes</h1>
-              <Button 
-                onClick={handleExport} 
-                className="flex items-center gap-2"
-              >
-                <FileDown className="h-4 w-4" />
-                Exportar Datos
-              </Button>
+      <div className="space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <h1 className="text-2xl font-bold">Mapa de Reportes</h1>
+          <Button 
+            onClick={handleExport} 
+            className="flex items-center gap-2"
+          >
+            <FileDown className="h-4 w-4" />
+            Exportar Datos
+          </Button>
+        </div>
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle>Vista de Mapa</CardTitle>
+            <CardDescription>
+              Visualización geográfica de todos los reportes
+            </CardDescription>
+            <Tabs 
+              defaultValue="all" 
+              className="mt-2"
+              onValueChange={setActiveFilter}
+            >
+              <TabsList className="grid grid-cols-4">
+                <TabsTrigger value="all">Todos</TabsTrigger>
+                <TabsTrigger value="open">Abiertos</TabsTrigger>
+                <TabsTrigger value="progress">En Progreso</TabsTrigger>
+                <TabsTrigger value="resolved">Resueltos</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="h-[500px] md:h-[600px]">
+              <TimeFilterProvider>
+                <MapView 
+                  height="100%" 
+                  filterStatus={activeFilter} 
+                  isStandalone={true} 
+                />
+              </TimeFilterProvider>
             </div>
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle>Vista de Mapa</CardTitle>
-                <CardDescription>
-                  Visualización geográfica de todos los reportes
-                </CardDescription>
-                <Tabs 
-                  defaultValue="all" 
-                  className="mt-2"
-                  onValueChange={setActiveFilter}
-                >
-                  <TabsList className="grid grid-cols-4">
-                    <TabsTrigger value="all">Todos</TabsTrigger>
-                    <TabsTrigger value="open">Abiertos</TabsTrigger>
-                    <TabsTrigger value="progress">En Progreso</TabsTrigger>
-                    <TabsTrigger value="resolved">Resueltos</TabsTrigger>
-                  </TabsList>
-                </Tabs>
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="h-[500px] md:h-[600px]">
-                  <MapView 
-                    height="100%" 
-                    filterStatus={activeFilter} 
-                    isStandalone={true} 
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TimeFilterProvider>
-      </ReportProvider>
+          </CardContent>
+        </Card>
+      </div>
     </AppLayout>
   );
 };

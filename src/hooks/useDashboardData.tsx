@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import { getReports, getReportsStats, getReportLocationHotspots, getAllActivities } from "@/services/reportService";
@@ -338,33 +337,30 @@ export const useDashboardData = () => {
     
     let filteredReports = reports;
     
-    if (selectedYear) {
+    if (selectedYear !== undefined) {
       filteredReports = filteredReports.filter(report => {
         const reportDate = new Date(report.createdAt);
         return reportDate.getFullYear() === selectedYear;
       });
     }
     
-    if (timeFrame === "month" && selectedMonth !== undefined) {
+    if ((timeFrame === "month" || timeFrame === "week") && selectedMonth !== undefined) {
       filteredReports = filteredReports.filter(report => {
         const reportDate = new Date(report.createdAt);
         return reportDate.getMonth() === selectedMonth;
       });
       
-      const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
-      for (let i = 1; i <= daysInMonth; i++) {
-        timeFrameData[i.toString()] = { name: i.toString(), open: 0, closed: 0, inProgress: 0 };
+      if (timeFrame === "month") {
+        const daysInMonth = new Date(selectedYear!, selectedMonth + 1, 0).getDate();
+        for (let i = 1; i <= daysInMonth; i++) {
+          timeFrameData[i.toString()] = { name: i.toString(), open: 0, closed: 0, inProgress: 0 };
+        }
+      } else if (timeFrame === "week") {
+        const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+        days.forEach(day => {
+          timeFrameData[day] = { name: day, open: 0, closed: 0, inProgress: 0 };
+        });
       }
-    } else if (timeFrame === "week" && selectedMonth !== undefined) {
-      filteredReports = filteredReports.filter(report => {
-        const reportDate = new Date(report.createdAt);
-        return reportDate.getMonth() === selectedMonth;
-      });
-      
-      const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-      days.forEach(day => {
-        timeFrameData[day] = { name: day, open: 0, closed: 0, inProgress: 0 };
-      });
     } else if (timeFrame === "year") {
       const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
       months.forEach(month => {

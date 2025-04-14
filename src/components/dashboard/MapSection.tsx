@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 import MapView from "@/components/map/MapView";
+import { useTimeFilter } from "@/context/TimeFilterContext";
 
 interface MapSectionProps {
   selectedCategories: string[];
@@ -23,6 +24,17 @@ const MapSection = ({
   activeReportTab,
   handleExportLocationData
 }: MapSectionProps) => {
+  // Access time filter context directly
+  const {
+    timeFrame,
+    selectedYear,
+    selectedMonth,
+    selectedDay,
+    showOpenReports,
+    showClosedReports,
+    showInProgressReports
+  } = useTimeFilter();
+
   return (
     <Card className="flex flex-col h-full min-h-[500px] lg:min-h-0">
       <CardHeader>
@@ -58,6 +70,16 @@ const MapSection = ({
           <MapView 
             height="100%" 
             categoryOnly={activeReportTab === "categories"}
+            timeFilters={{
+              timeFrame,
+              selectedYear,
+              selectedMonth,
+              selectedDay,
+              showOpenReports,
+              showClosedReports,
+              showInProgressReports
+            }}
+            selectedCategories={selectedCategories}
           />
         </div>
       </CardContent>

@@ -12,63 +12,32 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MapPin, ChevronRight } from "lucide-react";
-import { GeoReport } from '@/contexts/ReportContext';
-
-interface Location {
-  name: string;
-  lat: number;
-  lng: number;
-}
+import { getCoordinates } from "@/components/map/utils/LocationUtils";
 
 interface Report {
   id: string;
   title: string;
   status: string;
   category: string;
-  location: Location;
-  createdAt?: string;
+  location: string;
 }
 
 interface LocationListProps {
-  reports: Report[] | GeoReport[];
+  reports: Report[];
 }
 
 const LocationList = ({ reports }: LocationListProps) => {
   const getReportStatusColor = (status: string) => {
     switch (status) {
       case "Open":
-      case "draft":
         return "text-red-500";
       case "In Progress":
-      case "submitted":
         return "text-yellow-500";
       case "Resolved":
-      case "approved":
         return "text-green-500";
-      case "rejected":
-        return "text-gray-500";
       default:
         return "text-gray-500";
     }
-  };
-  
-  const getLocationInfo = (report: Report | GeoReport) => {
-    // Debug the report structure
-    console.log('Processing report:', report.id, report.title);
-    console.log('Location data:', report.location);
-    
-    if (!report.location) {
-      console.error('No location data found for report:', report.id);
-      return { name: "Unknown location", lat: 0, lng: 0 };
-    }
-    
-    // Extract location info with proper type checking
-    const locationName = report.location.name || "Unknown location";
-    const lat = typeof report.location.lat === 'number' ? report.location.lat : 0;
-    const lng = typeof report.location.lng === 'number' ? report.location.lng : 0;
-    
-    console.log('Extracted location info:', locationName, lat, lng);
-    return { name: locationName, lat, lng };
   };
   
   return (
@@ -93,7 +62,8 @@ const LocationList = ({ reports }: LocationListProps) => {
           <div className="divide-y divide-border">
             {reports.length > 0 ? (
               reports.map((report) => {
-                const locationInfo = getLocationInfo(report);
+                // Get coordinates for this location using our utility function
+                const coordinates = getCoordinates(report.location);
                 
                 return (
                   <Link
@@ -108,7 +78,7 @@ const LocationList = ({ reports }: LocationListProps) => {
                       <div className="flex-grow min-w-0">
                         <div className="flex justify-between items-start mb-1">
                           <h4 className="text-sm font-medium truncate">
-                            {locationInfo.name}
+                            {report.location || "Unknown location"}
                           </h4>
                           <Badge variant="outline" className="ml-2 text-xs">
                             {report.category}
@@ -120,8 +90,8 @@ const LocationList = ({ reports }: LocationListProps) => {
                               {report.title}
                             </p>
                             <div className="flex items-center text-xs text-muted-foreground gap-1">
-                              <span>Lat: {locationInfo.lat ? locationInfo.lat.toFixed(4) : "N/A"}</span>
-                              <span>Lng: {locationInfo.lng ? locationInfo.lng.toFixed(4) : "N/A"}</span>
+                              <span>Lat: {coordinates ? coordinates[0].toFixed(2) : "N/A"}</span>
+                              <span>Lng: {coordinates ? coordinates[1].toFixed(2) : "N/A"}</span>
                             </div>
                           </div>
                           <ChevronRight className="h-4 w-4 text-muted-foreground ml-1 flex-shrink-0" />

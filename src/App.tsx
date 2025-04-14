@@ -15,6 +15,7 @@ import SettingsPage from "./pages/SettingsPage";
 import NotFound from "./pages/NotFound";
 import Dashboard from "./pages/Dashboard";
 import { ReportProvider } from "./contexts/ReportContext";
+import { TimeFilterProvider } from "./context/TimeFilterContext";
 
 const App = () => {
   // Create a new QueryClient instance inside the component
@@ -26,22 +27,22 @@ const App = () => {
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/reports" element={<Reports />} />
-            <Route path="/reports/:id" element={<ReportDetail />} />
-            <Route path="/reports/:id/edit" element={<EditReport />} />
-            <Route path="/new-report" element={<NewReport />} />
-            <Route path="/map" element={<MapPage />} />
-            <Route path="/settings" element={<SettingsPage />} />
-            <Route path="/dashboard" element={
-              <ReportProvider>
-                <Dashboard />
-              </ReportProvider>
-            } />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <ReportProvider>
+            <TimeFilterProvider>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/reports" element={<Reports />} />
+                <Route path="/reports/:id" element={<ReportDetail />} />
+                <Route path="/reports/:id/edit" element={<EditReport />} />
+                <Route path="/new-report" element={<NewReport />} />
+                <Route path="/map" element={<MapPage />} />
+                <Route path="/settings" element={<SettingsPage />} />
+                <Route path="/dashboard" element={<Dashboard />} />
+                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </TimeFilterProvider>
+          </ReportProvider>
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>

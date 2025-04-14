@@ -13,11 +13,9 @@ const Index = () => {
           Overview of reports and analytics
         </p>
       </div>
-      <ReportProvider>
-        <TimeFilterProvider>
-          <DashboardView />
-        </TimeFilterProvider>
-      </ReportProvider>
+      <TimeFilterProvider>
+        <DashboardView />
+      </TimeFilterProvider>
     </AppLayout>
   );
 };
