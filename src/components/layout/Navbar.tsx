@@ -1,8 +1,18 @@
 
 import { Link, useLocation } from "react-router-dom";
-import { Bell, Map, BarChart3, FileText, PlusCircle, Menu, X } from "lucide-react";
+import { Bell, Map, BarChart3, FileText, PlusCircle, Menu, X, User, Settings, LogOut, HelpCircle, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 
 const Navbar = () => {
   const location = useLocation();
@@ -12,6 +22,8 @@ const Navbar = () => {
     { name: "Dashboard", path: "/", icon: <BarChart3 className="h-5 w-5 mr-2" /> },
     { name: "Map", path: "/map", icon: <Map className="h-5 w-5 mr-2" /> },
     { name: "Reports", path: "/reports", icon: <FileText className="h-5 w-5 mr-2" /> },
+    { name: "Admin", path: "/admin", icon: <Settings className="h-5 w-5 mr-2" /> },
+    { name: "Help", path: "/help", icon: <HelpCircle className="h-5 w-5 mr-2" /> },
   ];
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
@@ -22,6 +34,7 @@ const Navbar = () => {
         <div className="flex justify-between h-16 items-center">
           <div className="flex-shrink-0 flex items-center">
             <Link to="/" className="flex items-center">
+              <Globe className="h-6 w-6 text-primary mr-2" />
               <span className="text-primary font-bold text-xl">GeoReport</span>
             </Link>
           </div>
@@ -57,10 +70,44 @@ const Navbar = () => {
             </Link>
           </div>
 
-          <div className="hidden md:flex items-center">
-            <Button variant="ghost" size="icon" aria-label="Notifications">
+          <div className="hidden md:flex items-center space-x-2">
+            <Button variant="ghost" size="icon" aria-label="Notifications" className="relative">
               <Bell className="h-5 w-5" />
+              <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs" variant="destructive">3</Badge>
             </Button>
+            
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="rounded-full">
+                  <Avatar>
+                    <AvatarImage src="https://github.com/shadcn.png" />
+                    <AvatarFallback>JD</AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium">John Doe</p>
+                    <p className="text-xs text-muted-foreground">john.doe@example.com</p>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem>
+                  <User className="mr-2 h-4 w-4" />
+                  <span>Profile</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem>
+                  <Settings className="mr-2 h-4 w-4" />
+                  <span>Settings</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Log out</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </div>
@@ -92,6 +139,23 @@ const Navbar = () => {
               <PlusCircle className="h-5 w-5 mr-2" />
               New Report
             </Link>
+            
+            <div className="flex items-center justify-between px-3 py-2 mt-4 border-t border-border">
+              <div className="flex items-center">
+                <Avatar className="h-8 w-8 mr-2">
+                  <AvatarImage src="https://github.com/shadcn.png" />
+                  <AvatarFallback>JD</AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="text-sm font-medium">John Doe</p>
+                  <p className="text-xs text-muted-foreground">john.doe@example.com</p>
+                </div>
+              </div>
+              <Button variant="ghost" size="icon" aria-label="Notifications" className="relative">
+                <Bell className="h-5 w-5" />
+                <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs" variant="destructive">3</Badge>
+              </Button>
+            </div>
           </div>
         </div>
       )}

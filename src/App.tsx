@@ -11,6 +11,8 @@ import NewReport from "./pages/NewReport";
 import ReportDetail from "./pages/ReportDetail";
 import EditReport from "./pages/EditReport";
 import MapPage from "./pages/MapView";
+import Admin from "./pages/Admin";
+import Help from "./pages/Help";
 import SettingsPage from "./pages/SettingsPage";
 import NotFound from "./pages/NotFound";
 import Dashboard from "./pages/Dashboard";
@@ -36,6 +38,8 @@ const App = () => {
                 <Route path="/reports/:id/edit" element={<EditReport />} />
                 <Route path="/new-report" element={<NewReport />} />
                 <Route path="/map" element={<MapPage />} />
+                <Route path="/admin" element={<Admin />} />
+                <Route path="/help" element={<Help />} />
                 <Route path="/settings" element={<SettingsPage />} />
                 <Route path="/dashboard" element={<Dashboard />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

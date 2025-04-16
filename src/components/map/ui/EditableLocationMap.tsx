@@ -9,7 +9,7 @@ import { toast } from 'sonner';
 interface EditableLocationMapProps {
   location: string;
   height?: string;
-  onLocationChange: (lat: number, lng: number) => void;
+  onLocationChange: (lat: number, lng: number, locationName?: string) => void;
 }
 
 const EditableLocationMap: React.FC<EditableLocationMapProps> = ({
