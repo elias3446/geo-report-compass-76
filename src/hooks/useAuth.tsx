@@ -19,6 +19,7 @@ interface AuthContextType extends AuthState {
   isMobileCitizen: () => boolean;
   isMobileTechnician: () => boolean;
   checkFirstUser: () => Promise<boolean>;
+  checkAdminExists: () => Promise<boolean>;
   createFirstAdmin: (email: string, password: string, firstName: string, lastName: string) => Promise<{ error: any | null }>;
 }
 
@@ -66,6 +67,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Check if an admin user exists in the system
+  const checkAdminExists = async () => {
+    try {
+      const { count, error } = await supabase
+        .from('user_roles')
+        .select('*', { count: 'exact', head: true })
+        .eq('role', 'admin');
+      
+      if (error) {
+        console.error("Error checking admin existence:", error);
+        return false;
+      }
+      
+      return count > 0;
+    } catch (err) {
+      console.error("Error in checkAdminExists:", err);
+      return false;
+    }
+  };
+
   // Create the first admin user
   const createFirstAdmin = async (
     email: string,
@@ -78,6 +99,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const isFirstUser = await checkFirstUser();
       if (!isFirstUser) {
         return { error: new Error("Ya existe un usuario en el sistema. No se puede crear el primer administrador.") };
+      }
+
+      // Check if there are existing admins
+      const adminExists = await checkAdminExists();
+      if (adminExists) {
+        return { error: new Error("Ya existe un administrador en el sistema. No se puede crear otro primer administrador.") };
       }
 
       // Sign up the user
@@ -266,6 +293,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isMobileCitizen,
         isMobileTechnician,
         checkFirstUser,
+        checkAdminExists,
         createFirstAdmin
       }}
     >

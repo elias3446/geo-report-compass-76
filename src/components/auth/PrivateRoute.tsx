@@ -9,30 +9,41 @@ interface PrivateRouteProps {
 }
 
 const PrivateRoute: React.FC<PrivateRouteProps> = ({ children }) => {
-  const { user, loading, checkFirstUser } = useAuth();
+  const { user, loading, checkFirstUser, checkAdminExists } = useAuth();
   const location = useLocation();
   const [isFirstUser, setIsFirstUser] = useState<boolean | null>(null);
-  const [isCheckingFirstUser, setIsCheckingFirstUser] = useState(true);
+  const [hasAdmin, setHasAdmin] = useState<boolean | null>(null);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
   useEffect(() => {
-    const checkIsFirstUser = async () => {
+    const checkAuthState = async () => {
       if (!loading) {
         try {
-          const firstUser = await checkFirstUser();
-          setIsFirstUser(firstUser);
+          // First check if admin exists - this is the priority check
+          const adminExists = await checkAdminExists();
+          setHasAdmin(adminExists);
+          
+          // Only if no admin exists, we check if this is the first user
+          if (!adminExists) {
+            const firstUser = await checkFirstUser();
+            setIsFirstUser(firstUser);
+          } else {
+            setIsFirstUser(false);
+          }
         } catch (err) {
-          console.error("Error checking if first user:", err);
+          console.error("Error checking authentication state:", err);
           setIsFirstUser(false);
+          setHasAdmin(false);
         } finally {
-          setIsCheckingFirstUser(false);
+          setIsCheckingAuth(false);
         }
       }
     };
     
-    checkIsFirstUser();
-  }, [loading, checkFirstUser]);
+    checkAuthState();
+  }, [loading, checkFirstUser, checkAdminExists]);
 
-  if (loading || isCheckingFirstUser) {
+  if (loading || isCheckingAuth) {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -40,11 +51,12 @@ const PrivateRoute: React.FC<PrivateRouteProps> = ({ children }) => {
     );
   }
 
-  // If this is the first user setup, redirect to auth page
-  if (isFirstUser) {
+  // If this is the first user setup and no admin exists, redirect to auth page
+  if (isFirstUser && !hasAdmin) {
     return <Navigate to="/auth" state={{ from: location }} replace />;
   }
-
+  
+  // If an admin exists, follow normal authentication flow
   if (!user) {
     // Redirect to login page but save the location they were trying to access
     return <Navigate to="/auth" state={{ from: location }} replace />;

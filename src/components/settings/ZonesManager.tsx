@@ -2,33 +2,16 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/components/ui/use-toast";
-import { Loader, PlusCircle, Trash2, MapPin } from "lucide-react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogClose,
-} from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { useSupabaseStatus } from '@/hooks/useSupabaseStatus';
+import { Loader2, Edit, Trash2, MapPin, Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/components/ui/use-toast";
 
 interface Zone {
   id: string;
@@ -40,234 +23,209 @@ interface Zone {
   report_count?: number;
 }
 
-const ZonesManager: React.FC = () => {
+const ZonesManager = () => {
   const { toast } = useToast();
-  const { status } = useSupabaseStatus();
+  
   const [zones, setZones] = useState<Zone[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [newZone, setNewZone] = useState<Omit<Zone, 'id' | 'created_at' | 'updated_at'>>({
-    name: '',
-    description: '',
-    active: true
-  });
+  const [openCreateDialog, setOpenCreateDialog] = useState(false);
+  const [openEditDialog, setOpenEditDialog] = useState(false);
+  
+  // Form states
+  const [zoneName, setZoneName] = useState('');
+  const [zoneDescription, setZoneDescription] = useState('');
+  const [zoneActive, setZoneActive] = useState(true);
   const [editingZone, setEditingZone] = useState<Zone | null>(null);
-  const [reportCounts, setReportCounts] = useState<Record<string, number>>({});
 
+  // Load zones
   useEffect(() => {
-    if (status === 'connected') {
-      fetchZones();
-    }
-  }, [status]);
-
-  const fetchZones = async () => {
-    try {
+    const fetchZones = async () => {
       setLoading(true);
-      
-      // Fetch all zones
-      const { data: zonesData, error: zonesError } = await supabase
-        .from('zones')
-        .select('*')
-        .order('name');
-
-      if (zonesError) throw zonesError;
-
-      // Fetch report counts for each zone
-      const { data: reportData, error: reportError } = await supabase
-        .from('reports')
-        .select('zone_id, count')
-        .groupBy('zone_id');
-
-      if (reportError) throw reportError;
-
-      // Create a map of zone_id to report count
-      const counts: Record<string, number> = {};
-      reportData?.forEach((item: any) => {
-        if (item.zone_id) {
-          counts[item.zone_id] = parseInt(item.count);
+      try {
+        // Fetch zones
+        const { data: zonesData, error: zonesError } = await supabase
+          .from('zones')
+          .select('*');
+          
+        if (zonesError) {
+          throw zonesError;
         }
-      });
-
-      setReportCounts(counts);
-      setZones(zonesData as Zone[]);
-    } catch (error: any) {
-      console.error('Error fetching zones:', error);
-      toast({
-        title: "Error",
-        description: `Error al cargar zonas: ${error.message}`,
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleAddZone = async () => {
-    try {
-      if (!newZone.name.trim()) {
+        
+        // Fetch report counts for each zone
+        const zonesWithCounts = await Promise.all(
+          zonesData.map(async (zone) => {
+            const { count, error: countError } = await supabase
+              .from('reports')
+              .select('*', { count: 'exact', head: true })
+              .eq('zone_id', zone.id);
+              
+            if (countError) {
+              console.error("Error fetching report count:", countError);
+              return { ...zone, report_count: 0 };
+            }
+            
+            return { ...zone, report_count: count || 0 };
+          })
+        );
+        
+        setZones(zonesWithCounts);
+      } catch (error) {
+        console.error("Error fetching zones:", error);
         toast({
           title: "Error",
-          description: "El nombre de la zona es obligatorio",
-          variant: "destructive",
+          description: "No se pudieron cargar las zonas",
+          variant: "destructive"
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchZones();
+  }, [toast]);
+
+  const handleEditZone = (zone: Zone) => {
+    setEditingZone(zone);
+    setZoneName(zone.name);
+    setZoneDescription(zone.description || '');
+    setZoneActive(zone.active);
+    setOpenEditDialog(true);
+  };
+
+  const handleDeleteZone = async (zoneId: string) => {
+    if (!confirm("¿Estás seguro de que deseas eliminar esta zona?")) {
+      return;
+    }
+    
+    try {
+      const { data: reportsCount, error: countError } = await supabase
+        .from('reports')
+        .select('*', { count: 'exact', head: true })
+        .eq('zone_id', zoneId);
+        
+      if (countError) {
+        throw countError;
+      }
+      
+      // If there are reports associated with this zone, don't allow deletion
+      if (reportsCount && reportsCount > 0) {
+        toast({
+          title: "No se puede eliminar",
+          description: "Esta zona tiene reportes asociados. Desactívela en lugar de eliminarla.",
+          variant: "destructive"
         });
         return;
       }
+      
+      const { error: deleteError } = await supabase
+        .from('zones')
+        .delete()
+        .eq('id', zoneId);
+        
+      if (deleteError) {
+        throw deleteError;
+      }
+      
+      // Update the local state
+      setZones(zones.filter(zone => zone.id !== zoneId));
+      
+      toast({
+        title: "Zona eliminada",
+        description: "La zona ha sido eliminada correctamente"
+      });
+    } catch (error) {
+      console.error("Error deleting zone:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo eliminar la zona",
+        variant: "destructive"
+      });
+    }
+  };
 
+  const handleCreateZone = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
       const { data, error } = await supabase
         .from('zones')
         .insert({
-          name: newZone.name,
-          description: newZone.description || null,
-          active: newZone.active
+          name: zoneName,
+          description: zoneDescription || null,
+          active: zoneActive
         })
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      setZones([...zones, data as Zone]);
-      setIsAddDialogOpen(false);
+        .select();
+        
+      if (error) {
+        throw error;
+      }
       
-      // Reset the form
-      setNewZone({
-        name: '',
-        description: '',
-        active: true
-      });
-
+      // Add the new zone to the state
+      if (data && data.length > 0) {
+        setZones([...zones, { ...data[0], report_count: 0 }]);
+      }
+      
+      // Reset form
+      setZoneName('');
+      setZoneDescription('');
+      setZoneActive(true);
+      setOpenCreateDialog(false);
+      
       toast({
-        title: "Éxito",
-        description: "Zona añadida correctamente",
+        title: "Zona creada",
+        description: "La zona ha sido creada correctamente"
       });
     } catch (error: any) {
       toast({
         title: "Error",
-        description: `Error al añadir zona: ${error.message}`,
-        variant: "destructive",
+        description: error.message || "No se pudo crear la zona",
+        variant: "destructive"
       });
     }
   };
 
-  const handleUpdateZone = async () => {
+  const handleUpdateZone = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingZone) return;
+    
     try {
-      if (!editingZone) return;
-
-      if (!editingZone.name.trim()) {
-        toast({
-          title: "Error",
-          description: "El nombre de la zona es obligatorio",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('zones')
         .update({
-          name: editingZone.name,
-          description: editingZone.description,
-          active: editingZone.active
+          name: zoneName,
+          description: zoneDescription || null,
+          active: zoneActive
         })
-        .eq('id', editingZone.id)
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      // Update the zone in the state
+        .eq('id', editingZone.id);
+        
+      if (error) {
+        throw error;
+      }
+      
+      // Update local state
       setZones(zones.map(zone => 
-        zone.id === editingZone.id ? (data as Zone) : zone
+        zone.id === editingZone.id 
+          ? { 
+              ...zone, 
+              name: zoneName, 
+              description: zoneDescription, 
+              active: zoneActive 
+            } 
+          : zone
       ));
       
-      setIsEditDialogOpen(false);
-      setEditingZone(null);
-
+      setOpenEditDialog(false);
+      
       toast({
-        title: "Éxito",
-        description: "Zona actualizada correctamente",
+        title: "Zona actualizada",
+        description: "La zona ha sido actualizada correctamente"
       });
     } catch (error: any) {
       toast({
         title: "Error",
-        description: `Error al actualizar zona: ${error.message}`,
-        variant: "destructive",
+        description: error.message || "No se pudo actualizar la zona",
+        variant: "destructive"
       });
     }
-  };
-
-  const handleDeleteZone = async (id: string) => {
-    // Check if zone has reports
-    if (reportCounts[id] && reportCounts[id] > 0) {
-      toast({
-        title: "No se puede eliminar",
-        description: "Esta zona tiene reportes asociados. Desactívela en lugar de eliminarla.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      if (!confirm("¿Está seguro de que desea eliminar esta zona? Esta acción no se puede deshacer.")) {
-        return;
-      }
-
-      const { error } = await supabase
-        .from('zones')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-
-      // Remove the zone from the state
-      setZones(zones.filter(zone => zone.id !== id));
-
-      toast({
-        title: "Éxito",
-        description: "Zona eliminada correctamente",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: `Error al eliminar zona: ${error.message}`,
-        variant: "destructive",
-      });
-    }
-  };
-
-  const toggleZoneActive = async (id: string, currentActive: boolean) => {
-    try {
-      const { error } = await supabase
-        .from('zones')
-        .update({ active: !currentActive })
-        .eq('id', id);
-
-      if (error) throw error;
-
-      // Update the zone in the state
-      setZones(zones.map(zone => 
-        zone.id === id ? { ...zone, active: !currentActive } : zone
-      ));
-
-      toast({
-        title: "Éxito",
-        description: `Zona ${!currentActive ? 'activada' : 'desactivada'} correctamente`,
-      });
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: `Error al actualizar zona: ${error.message}`,
-        variant: "destructive",
-      });
-    }
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('es-ES', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
   };
 
   return (
@@ -275,197 +233,152 @@ const ZonesManager: React.FC = () => {
       <CardHeader className="flex flex-row items-center justify-between">
         <div>
           <CardTitle>Gestión de Zonas</CardTitle>
-          <CardDescription>Administra las zonas geográficas de reportes</CardDescription>
+          <CardDescription>Administrar zonas geográficas</CardDescription>
         </div>
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+        <Dialog open={openCreateDialog} onOpenChange={setOpenCreateDialog}>
           <DialogTrigger asChild>
-            <Button>
-              <PlusCircle className="mr-2 h-4 w-4" /> Añadir Zona
+            <Button className="h-8">
+              <Plus className="h-4 w-4 mr-2" />
+              Nueva Zona
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Añadir Nueva Zona</DialogTitle>
+              <DialogTitle>Crear Nueva Zona</DialogTitle>
               <DialogDescription>
-                Completa los detalles para añadir una nueva zona geográfica
+                Complete los campos para crear una nueva zona geográfica.
               </DialogDescription>
             </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="name" className="text-right">
-                  Nombre
-                </Label>
-                <Input
-                  id="name"
-                  value={newZone.name}
-                  onChange={(e) => setNewZone({...newZone, name: e.target.value})}
-                  className="col-span-3"
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="description" className="text-right">
-                  Descripción
-                </Label>
-                <Textarea
-                  id="description"
-                  value={newZone.description || ''}
-                  onChange={(e) => setNewZone({...newZone, description: e.target.value})}
-                  className="col-span-3"
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="active" className="text-right">
-                  Activa
-                </Label>
-                <div className="col-span-3">
-                  <Switch
-                    id="active"
-                    checked={newZone.active}
-                    onCheckedChange={(checked) => setNewZone({...newZone, active: checked})}
+            <form onSubmit={handleCreateZone}>
+              <div className="grid gap-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="zoneName">Nombre de la Zona</Label>
+                  <Input 
+                    id="zoneName" 
+                    value={zoneName}
+                    onChange={(e) => setZoneName(e.target.value)}
+                    placeholder="Ej: Zona Norte"
+                    required
                   />
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="zoneDescription">Descripción</Label>
+                  <Textarea 
+                    id="zoneDescription" 
+                    value={zoneDescription}
+                    onChange={(e) => setZoneDescription(e.target.value)}
+                    placeholder="Descripción de la zona"
+                    rows={3}
+                  />
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Switch 
+                    id="zoneActive" 
+                    checked={zoneActive}
+                    onCheckedChange={setZoneActive}
+                  />
+                  <Label htmlFor="zoneActive">Zona Activa</Label>
+                </div>
               </div>
-            </div>
-            <DialogFooter>
-              <DialogClose asChild>
-                <Button variant="outline">Cancelar</Button>
-              </DialogClose>
-              <Button onClick={handleAddZone}>Guardar</Button>
-            </DialogFooter>
+              <DialogFooter>
+                <Button type="submit">Crear Zona</Button>
+              </DialogFooter>
+            </form>
           </DialogContent>
         </Dialog>
       </CardHeader>
       <CardContent>
         {loading ? (
-          <div className="flex justify-center items-center py-6">
-            <Loader className="mr-2 h-6 w-6 animate-spin" />
-            <span>Cargando zonas...</span>
-          </div>
-        ) : zones.length === 0 ? (
-          <div className="text-center py-6 text-muted-foreground">
-            No hay zonas registradas. Añade una nueva zona para comenzar.
+          <div className="flex justify-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
         ) : (
-          <div className="rounded-md border overflow-hidden">
+          <div className="rounded-md border">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Nombre</TableHead>
                   <TableHead>Descripción</TableHead>
-                  <TableHead>Estado</TableHead>
                   <TableHead>Reportes</TableHead>
-                  <TableHead>Fecha creación</TableHead>
-                  <TableHead>Acciones</TableHead>
+                  <TableHead>Estado</TableHead>
+                  <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {zones.map((zone) => (
-                  <TableRow key={zone.id}>
-                    <TableCell className="font-medium">{zone.name}</TableCell>
-                    <TableCell>{zone.description || '-'}</TableCell>
-                    <TableCell>
-                      <Badge 
-                        variant={zone.active ? "success" : "secondary"}
-                        className={zone.active ? "bg-green-100 text-green-800 hover:bg-green-100" : "bg-gray-100 text-gray-800 hover:bg-gray-100"}
-                      >
-                        {zone.active ? 'Activa' : 'Inactiva'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {reportCounts[zone.id] || 0} reportes
-                    </TableCell>
-                    <TableCell>{formatDate(zone.created_at)}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setEditingZone(zone);
-                            setIsEditDialogOpen(true);
-                          }}
-                        >
-                          Editar
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => toggleZoneActive(zone.id, zone.active)}
-                        >
-                          {zone.active ? 'Desactivar' : 'Activar'}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteZone(zone.id)}
-                          disabled={reportCounts[zone.id] > 0}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
+                {zones.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-6 text-muted-foreground">
+                      No hay zonas registradas
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : (
+                  zones.map((zone) => (
+                    <TableRow key={zone.id}>
+                      <TableCell>{zone.name}</TableCell>
+                      <TableCell>{zone.description || "Sin descripción"}</TableCell>
+                      <TableCell>{zone.report_count || 0} reportes</TableCell>
+                      <TableCell>
+                        <Badge variant={zone.active ? 'success' : 'destructive'}>
+                          {zone.active ? 'Activa' : 'Inactiva'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="icon" onClick={() => handleEditZone(zone)}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleDeleteZone(zone.id)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </div>
         )}
-
-        {/* Edit Zone Dialog */}
-        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        
+        <Dialog open={openEditDialog} onOpenChange={setOpenEditDialog}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Editar Zona</DialogTitle>
               <DialogDescription>
-                Actualiza los detalles de la zona geográfica
+                Actualice la información de la zona.
               </DialogDescription>
             </DialogHeader>
-            {editingZone && (
+            <form onSubmit={handleUpdateZone}>
               <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="edit-name" className="text-right">
-                    Nombre
-                  </Label>
-                  <Input
-                    id="edit-name"
-                    value={editingZone.name}
-                    onChange={(e) => setEditingZone({...editingZone, name: e.target.value})}
-                    className="col-span-3"
+                <div className="space-y-2">
+                  <Label htmlFor="editZoneName">Nombre de la Zona</Label>
+                  <Input 
+                    id="editZoneName" 
+                    value={zoneName}
+                    onChange={(e) => setZoneName(e.target.value)}
+                    required
                   />
                 </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="edit-description" className="text-right">
-                    Descripción
-                  </Label>
-                  <Textarea
-                    id="edit-description"
-                    value={editingZone.description || ''}
-                    onChange={(e) => setEditingZone({...editingZone, description: e.target.value})}
-                    className="col-span-3"
+                <div className="space-y-2">
+                  <Label htmlFor="editZoneDescription">Descripción</Label>
+                  <Textarea 
+                    id="editZoneDescription" 
+                    value={zoneDescription}
+                    onChange={(e) => setZoneDescription(e.target.value)}
+                    rows={3}
                   />
                 </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="edit-active" className="text-right">
-                    Activa
-                  </Label>
-                  <div className="col-span-3">
-                    <Switch
-                      id="edit-active"
-                      checked={editingZone.active}
-                      onCheckedChange={(checked) => 
-                        setEditingZone({...editingZone, active: checked})
-                      }
-                    />
-                  </div>
+                <div className="flex items-center space-x-2">
+                  <Switch 
+                    id="editZoneActive" 
+                    checked={zoneActive}
+                    onCheckedChange={setZoneActive}
+                  />
+                  <Label htmlFor="editZoneActive">Zona Activa</Label>
                 </div>
               </div>
-            )}
-            <DialogFooter>
-              <DialogClose asChild>
-                <Button variant="outline">Cancelar</Button>
-              </DialogClose>
-              <Button onClick={handleUpdateZone}>Guardar Cambios</Button>
-            </DialogFooter>
+              <DialogFooter>
+                <Button type="submit">Actualizar Zona</Button>
+              </DialogFooter>
+            </form>
           </DialogContent>
         </Dialog>
       </CardContent>

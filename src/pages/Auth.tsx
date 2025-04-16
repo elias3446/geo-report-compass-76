@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,37 +14,43 @@ import FirstUserRegistration from '@/components/auth/FirstUserRegistration';
 const Auth = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user, signIn, signUp, checkFirstUser } = useAuth();
+  const { user, signIn, signUp, checkFirstUser, checkAdminExists } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isFirstUser, setIsFirstUser] = useState<boolean | null>(null);
-  const [isCheckingFirstUser, setIsCheckingFirstUser] = useState(true);
+  const [hasAdmin, setHasAdmin] = useState<boolean | null>(null);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   
   // Form states
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
-  const [signupEmail, setSignupEmail] = useState('');
-  const [signupPassword, setSignupPassword] = useState('');
-  const [signupConfirmPassword, setSignupConfirmPassword] = useState('');
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
 
-  // Check if this is the first user setup
+  // Check if this is the first user setup or if admin exists
   useEffect(() => {
-    const checkIsFirstUser = async () => {
+    const checkAuthState = async () => {
       try {
-        const firstUser = await checkFirstUser();
-        setIsFirstUser(firstUser);
+        // First check if admin exists - this is the priority check
+        const adminExists = await checkAdminExists();
+        setHasAdmin(adminExists);
+        
+        // Only if no admin exists, we check if this is the first user
+        if (!adminExists) {
+          const firstUser = await checkFirstUser();
+          setIsFirstUser(firstUser);
+        } else {
+          setIsFirstUser(false);
+        }
       } catch (err) {
-        console.error("Error checking if first user:", err);
+        console.error("Error checking authentication state:", err);
         setIsFirstUser(false);
+        setHasAdmin(false);
       } finally {
-        setIsCheckingFirstUser(false);
+        setIsCheckingAuth(false);
       }
     };
     
-    checkIsFirstUser();
-  }, [checkFirstUser]);
+    checkAuthState();
+  }, [checkFirstUser, checkAdminExists]);
 
   // Redirect if already logged in
   useEffect(() => {
@@ -77,48 +82,7 @@ const Auth = () => {
     }
   };
 
-  const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError(null);
-    
-    // Validation
-    if (signupPassword !== signupConfirmPassword) {
-      setError('Las contraseñas no coinciden');
-      setIsLoading(false);
-      return;
-    }
-    
-    if (signupPassword.length < 6) {
-      setError('La contraseña debe tener al menos 6 caracteres');
-      setIsLoading(false);
-      return;
-    }
-    
-    try {
-      const { error } = await signUp(signupEmail, signupPassword, {
-        first_name: firstName,
-        last_name: lastName
-      });
-      
-      if (error) {
-        setError(error.message || 'Error al registrarse');
-      } else {
-        toast({
-          title: "Registro exitoso",
-          description: "Cuenta creada correctamente. Verifica tu correo electrónico.",
-        });
-        // Stay on the login tab after successful registration
-        document.getElementById('login-tab')?.click();
-      }
-    } catch (err: any) {
-      setError(err.message || 'Error desconocido al registrarse');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  if (isCheckingFirstUser) {
+  if (isCheckingAuth) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-muted/30">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -126,8 +90,8 @@ const Auth = () => {
     );
   }
 
-  // If this is the first user, show the first user registration form
-  if (isFirstUser) {
+  // If this is the first user and no admin exists, show the first user registration form
+  if (isFirstUser && !hasAdmin) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-muted/30">
         <div className="w-full max-w-md px-4">
@@ -142,6 +106,7 @@ const Auth = () => {
     );
   }
 
+  // Otherwise show the regular login form
   return (
     <div className="flex items-center justify-center min-h-screen bg-muted/30">
       <div className="w-full max-w-md px-4">

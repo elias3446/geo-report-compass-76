@@ -2,422 +2,344 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/components/ui/use-toast";
-import { Loader, PlusCircle, Lock, Unlock, UserX } from "lucide-react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogClose,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Loader2, Edit, Trash2, UserPlus } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from '@/hooks/useAuth';
-import { useSupabaseStatus } from '@/hooks/useSupabaseStatus';
 
-interface UserProfile {
+interface User {
   id: string;
+  email: string;
   first_name: string;
   last_name: string;
-  email: string;
   role: string;
+  created_at: string;
   active: boolean;
 }
 
-type UserRole = 'admin' | 'web_supervisor' | 'mobile_citizen' | 'mobile_technician';
-
-const UserManagement: React.FC = () => {
+const UserManagement = () => {
   const { toast } = useToast();
-  const { isAdmin, signUp } = useAuth();
-  const { status } = useSupabaseStatus();
-  const [users, setUsers] = useState<UserProfile[]>([]);
+  const { signUp } = useAuth();
+  
+  const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [newUser, setNewUser] = useState({
-    email: '',
-    password: '',
-    confirmPassword: '',
-    firstName: '',
-    lastName: '',
-    role: 'mobile_citizen' as UserRole,
-  });
-  const [error, setError] = useState<string | null>(null);
+  const [openCreateDialog, setOpenCreateDialog] = useState(false);
+  const [openEditDialog, setOpenEditDialog] = useState(false);
+  
+  // Form states
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [selectedRole, setSelectedRole] = useState('mobile_citizen');
+  const [editingUser, setEditingUser] = useState<User | null>(null);
 
+  // Load users
   useEffect(() => {
-    if (status === 'connected') {
-      fetchUsers();
-    }
-  }, [status]);
-
-  const fetchUsers = async () => {
-    try {
+    const fetchUsers = async () => {
       setLoading(true);
-      
-      // Get profiles with joined user roles
-      const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
-        .select(`
-          id,
-          first_name,
-          last_name,
-          active
-        `);
-
-      if (profilesError) throw profilesError;
-
-      // Get user roles
-      const { data: userRoles, error: rolesError } = await supabase
-        .from('user_roles')
-        .select('user_id, role');
-
-      if (rolesError) throw rolesError;
-
-      // Get user emails from auth.users (this requires admin privileges)
-      const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
-      
-      if (authError) {
-        console.error("Error fetching auth users:", authError);
-        // We'll continue anyway, but emails might be missing
-      }
-
-      // Combine the data
-      const usersWithRoles = profiles.map(profile => {
-        const userRole = userRoles.find(ur => ur.user_id === profile.id);
-        let authUserEmail = 'No email available';
-        
-        // Safely access authUsers if it exists and has a users property
-        if (authUsers && authUsers.users) {
-          const authUser = authUsers.users.find(au => au.id === profile.id);
-          if (authUser && authUser.email) {
-            authUserEmail = authUser.email;
-          }
-        }
-        
-        return {
-          id: profile.id,
-          first_name: profile.first_name,
-          last_name: profile.last_name,
-          email: authUserEmail,
-          role: userRole?.role || 'unknown',
-          active: profile.active
-        };
-      });
-
-      setUsers(usersWithRoles);
-    } catch (error: any) {
-      console.error('Error fetching users:', error);
-      toast({
-        title: "Error",
-        description: `Error al cargar usuarios: ${error.message}`,
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleAddUser = async () => {
-    try {
-      setError(null);
-      
-      // Validation
-      if (!newUser.email || !newUser.password || !newUser.firstName || !newUser.lastName) {
-        setError("Todos los campos son obligatorios");
-        return;
-      }
-      
-      if (newUser.password !== newUser.confirmPassword) {
-        setError("Las contraseñas no coinciden");
-        return;
-      }
-      
-      if (newUser.password.length < 6) {
-        setError("La contraseña debe tener al menos 6 caracteres");
-        return;
-      }
-      
-      // Create the user
-      const { error: signUpError } = await signUp(
-        newUser.email,
-        newUser.password,
-        {
-          first_name: newUser.firstName,
-          last_name: newUser.lastName
-        }
-      );
-      
-      if (signUpError) {
-        setError(signUpError.message);
-        return;
-      }
-
-      // We need to set the role manually since it's not part of the signUp function
-      // This requires fetching the newly created user
-      const { data: newUserData } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('first_name', newUser.firstName)
-        .eq('last_name', newUser.lastName)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
-
-      if (newUserData) {
-        // First, remove any existing roles
-        await supabase
-          .from('user_roles')
-          .delete()
-          .eq('user_id', newUserData.id);
+      try {
+        const { data: profiles, error: profilesError } = await supabase
+          .from('profiles')
+          .select('*');
           
-        // Then add the new role
-        await supabase
-          .from('user_roles')
-          .insert({
-            user_id: newUserData.id,
-            role: newUser.role
-          });
+        if (profilesError) {
+          throw profilesError;
+        }
+        
+        // Fetch roles for each profile
+        const usersWithRoles = await Promise.all(
+          profiles.map(async (profile) => {
+            const { data: roleData, error: roleError } = await supabase
+              .from('user_roles')
+              .select('role')
+              .eq('user_id', profile.id)
+              .single();
+              
+            if (roleError && roleError.code !== 'PGRST116') {
+              console.error("Error fetching role:", roleError);
+            }
+            
+            return {
+              ...profile,
+              role: roleData?.role || 'unknown'
+            };
+          })
+        );
+        
+        setUsers(usersWithRoles);
+      } catch (error) {
+        console.error("Error fetching users:", error);
+        toast({
+          title: "Error",
+          description: "No se pudieron cargar los usuarios",
+          variant: "destructive"
+        });
+      } finally {
+        setLoading(false);
       }
+    };
+    
+    fetchUsers();
+  }, [toast]);
 
-      // Reset form and close dialog
-      setNewUser({
-        email: '',
-        password: '',
-        confirmPassword: '',
-        firstName: '',
-        lastName: '',
-        role: 'mobile_citizen',
-      });
-      setIsAddDialogOpen(false);
-      
-      // Refresh user list
-      fetchUsers();
-      
-      toast({
-        title: "Usuario creado",
-        description: "El usuario ha sido creado exitosamente"
-      });
-    } catch (error: any) {
-      console.error('Error adding user:', error);
-      setError(error.message || "Error al crear usuario");
-    }
+  const handleEditUser = (user: User) => {
+    setEditingUser(user);
+    setFirstName(user.first_name);
+    setLastName(user.last_name);
+    setSelectedRole(user.role);
+    setOpenEditDialog(true);
   };
 
-  const toggleUserActive = async (userId: string, currentActive: boolean) => {
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ active: !currentActive })
-        .eq('id', userId);
-
-      if (error) throw error;
-
-      // Update local state
-      setUsers(users.map(user => 
-        user.id === userId ? { ...user, active: !currentActive } : user
-      ));
-
-      toast({
-        title: "Usuario actualizado",
-        description: `Usuario ${!currentActive ? 'activado' : 'desactivado'} exitosamente`
-      });
-    } catch (error: any) {
-      console.error('Error toggling user active status:', error);
-      toast({
-        title: "Error",
-        description: `Error al actualizar usuario: ${error.message}`,
-        variant: "destructive",
-      });
+  const handleDeleteUser = async (userId: string) => {
+    if (!confirm("¿Estás seguro de que deseas eliminar este usuario?")) {
+      return;
     }
-  };
-
-  const changeUserRole = async (userId: string, newRole: UserRole) => {
+    
     try {
-      // First, remove any existing roles
-      await supabase
+      // First remove from user_roles
+      const { error: roleError } = await supabase
         .from('user_roles')
         .delete()
         .eq('user_id', userId);
         
-      // Then add the new role
-      const { error } = await supabase
-        .from('user_roles')
-        .insert({
-          user_id: userId,
-          role: newRole
-        });
-
-      if (error) throw error;
-
-      // Update local state
+      if (roleError) {
+        throw roleError;
+      }
+      
+      // Then update the profile to set as inactive
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ active: false })
+        .eq('id', userId);
+        
+      if (profileError) {
+        throw profileError;
+      }
+      
+      // Update the local state
       setUsers(users.map(user => 
-        user.id === userId ? { ...user, role: newRole } : user
+        user.id === userId ? { ...user, active: false } : user
       ));
-
+      
       toast({
-        title: "Rol actualizado",
-        description: "El rol del usuario ha sido actualizado exitosamente"
+        title: "Usuario desactivado",
+        description: "El usuario ha sido desactivado correctamente"
       });
-    } catch (error: any) {
-      console.error('Error changing user role:', error);
+    } catch (error) {
+      console.error("Error deleting user:", error);
       toast({
         title: "Error",
-        description: `Error al cambiar rol: ${error.message}`,
-        variant: "destructive",
+        description: "No se pudo eliminar el usuario",
+        variant: "destructive"
       });
     }
   };
 
-  const roleOptions = [
-    { value: 'admin', label: 'Administrador' },
-    { value: 'web_supervisor', label: 'Supervisor Web' },
-    { value: 'mobile_citizen', label: 'Ciudadano (Móvil)' },
-    { value: 'mobile_technician', label: 'Técnico (Móvil)' }
-  ];
+  const handleCreateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      // Create the user with auth
+      const { error: signUpError } = await signUp(email, password, {
+        first_name: firstName,
+        last_name: lastName
+      });
+      
+      if (signUpError) {
+        throw signUpError;
+      }
+      
+      // Reset form
+      setEmail('');
+      setPassword('');
+      setFirstName('');
+      setLastName('');
+      setSelectedRole('mobile_citizen');
+      setOpenCreateDialog(false);
+      
+      // Refresh the user list
+      // This is a simplified approach - in production, you'd want to fetch the new user data
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+      
+      toast({
+        title: "Usuario creado",
+        description: "El usuario ha sido creado correctamente"
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "No se pudo crear el usuario",
+        variant: "destructive"
+      });
+    }
+  };
 
-  if (!isAdmin()) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Gestión de Usuarios</CardTitle>
-          <CardDescription>
-            No tienes permisos de administrador para acceder a esta sección
-          </CardDescription>
-        </CardHeader>
-      </Card>
-    );
-  }
+  const handleUpdateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingUser) return;
+    
+    try {
+      // Update profile
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({
+          first_name: firstName,
+          last_name: lastName
+        })
+        .eq('id', editingUser.id);
+        
+      if (profileError) {
+        throw profileError;
+      }
+      
+      // Update role if changed
+      if (editingUser.role !== selectedRole) {
+        const { error: deleteRoleError } = await supabase
+          .from('user_roles')
+          .delete()
+          .eq('user_id', editingUser.id);
+          
+        if (deleteRoleError) {
+          throw deleteRoleError;
+        }
+        
+        const { error: insertRoleError } = await supabase
+          .from('user_roles')
+          .insert({
+            user_id: editingUser.id,
+            role: selectedRole
+          });
+          
+        if (insertRoleError) {
+          throw insertRoleError;
+        }
+      }
+      
+      // Update local state
+      setUsers(users.map(user => 
+        user.id === editingUser.id 
+          ? { ...user, first_name: firstName, last_name: lastName, role: selectedRole } 
+          : user
+      ));
+      
+      setOpenEditDialog(false);
+      
+      toast({
+        title: "Usuario actualizado",
+        description: "El usuario ha sido actualizado correctamente"
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "No se pudo actualizar el usuario",
+        variant: "destructive"
+      });
+    }
+  };
 
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <div>
           <CardTitle>Gestión de Usuarios</CardTitle>
-          <CardDescription>Administra los usuarios del sistema</CardDescription>
+          <CardDescription>Administrar usuarios de la plataforma</CardDescription>
         </div>
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+        <Dialog open={openCreateDialog} onOpenChange={setOpenCreateDialog}>
           <DialogTrigger asChild>
-            <Button>
-              <PlusCircle className="mr-2 h-4 w-4" /> Añadir Usuario
+            <Button className="h-8">
+              <UserPlus className="h-4 w-4 mr-2" />
+              Nuevo Usuario
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Añadir Nuevo Usuario</DialogTitle>
+              <DialogTitle>Crear Nuevo Usuario</DialogTitle>
               <DialogDescription>
-                Completa los datos para crear un nuevo usuario en el sistema
+                Complete los campos para crear un nuevo usuario en el sistema.
               </DialogDescription>
             </DialogHeader>
-            <div className="grid gap-4 py-4">
-              {error && (
-                <div className="bg-destructive/15 text-destructive p-3 rounded-md text-sm">
-                  {error}
+            <form onSubmit={handleCreateUser}>
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="firstName">Nombre</Label>
+                    <Input 
+                      id="firstName" 
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="lastName">Apellido</Label>
+                    <Input 
+                      id="lastName" 
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      required
+                    />
+                  </div>
                 </div>
-              )}
-              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="firstName">Nombre</Label>
+                  <Label htmlFor="email">Correo Electrónico</Label>
                   <Input 
-                    id="firstName" 
-                    value={newUser.firstName}
-                    onChange={(e) => setNewUser({...newUser, firstName: e.target.value})}
+                    id="email" 
+                    type="email" this
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="lastName">Apellido</Label>
+                  <Label htmlFor="password">Contraseña</Label>
                   <Input 
-                    id="lastName" 
-                    value={newUser.lastName}
-                    onChange={(e) => setNewUser({...newUser, lastName: e.target.value})}
+                    id="password" 
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
                   />
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="role">Rol</Label>
+                  <Select 
+                    value={selectedRole} 
+                    onValueChange={setSelectedRole}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar rol" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="admin">Administrador</SelectItem>
+                      <SelectItem value="web_supervisor">Supervisor Web</SelectItem>
+                      <SelectItem value="mobile_technician">Técnico Móvil</SelectItem>
+                      <SelectItem value="mobile_citizen">Ciudadano Móvil</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Correo Electrónico</Label>
-                <Input 
-                  id="email" 
-                  type="email"
-                  value={newUser.email}
-                  onChange={(e) => setNewUser({...newUser, email: e.target.value})}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Contraseña</Label>
-                <Input 
-                  id="password" 
-                  type="password"
-                  value={newUser.password}
-                  onChange={(e) => setNewUser({...newUser, password: e.target.value})}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirmar Contraseña</Label>
-                <Input 
-                  id="confirmPassword" 
-                  type="password"
-                  value={newUser.confirmPassword}
-                  onChange={(e) => setNewUser({...newUser, confirmPassword: e.target.value})}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="role">Rol</Label>
-                <Select 
-                  value={newUser.role} 
-                  onValueChange={(value: UserRole) => setNewUser({...newUser, role: value})}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecciona un rol" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {roleOptions.map(option => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <DialogFooter>
-              <DialogClose asChild>
-                <Button variant="outline">Cancelar</Button>
-              </DialogClose>
-              <Button onClick={handleAddUser}>Crear Usuario</Button>
-            </DialogFooter>
+              <DialogFooter>
+                <Button type="submit">Crear Usuario</Button>
+              </DialogFooter>
+            </form>
           </DialogContent>
         </Dialog>
       </CardHeader>
       <CardContent>
         {loading ? (
-          <div className="flex justify-center items-center py-6">
-            <Loader className="mr-2 h-6 w-6 animate-spin" />
-            <span>Cargando usuarios...</span>
-          </div>
-        ) : users.length === 0 ? (
-          <div className="text-center py-6 text-muted-foreground">
-            No hay usuarios registrados. Añade un nuevo usuario para comenzar.
+          <div className="flex justify-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
         ) : (
-          <div className="rounded-md border overflow-hidden">
+          <div className="rounded-md border">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -425,55 +347,105 @@ const UserManagement: React.FC = () => {
                   <TableHead>Email</TableHead>
                   <TableHead>Rol</TableHead>
                   <TableHead>Estado</TableHead>
-                  <TableHead>Acciones</TableHead>
+                  <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {users.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell>{`${user.first_name} ${user.last_name}`}</TableCell>
-                    <TableCell>{user.email}</TableCell>
-                    <TableCell>
-                      <Select 
-                        value={user.role} 
-                        onValueChange={(value: UserRole) => changeUserRole(user.id, value)}
-                      >
-                        <SelectTrigger className="w-[180px]">
-                          <SelectValue placeholder="Selecciona un rol" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {roleOptions.map(option => (
-                            <SelectItem key={option.value} value={option.value}>
-                              {option.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </TableCell>
-                    <TableCell>
-                      <span className={`px-2 py-1 rounded text-xs ${user.active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
-                        {user.active ? 'Activo' : 'Inactivo'}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => toggleUserActive(user.id, user.active)}
-                      >
-                        {user.active ? (
-                          <Lock className="h-4 w-4 text-amber-500" />
-                        ) : (
-                          <Unlock className="h-4 w-4 text-green-500" />
-                        )}
-                      </Button>
+                {users.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-6 text-muted-foreground">
+                      No hay usuarios registrados
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : (
+                  users.map((user) => (
+                    <TableRow key={user.id}>
+                      <TableCell>{user.first_name} {user.last_name}</TableCell>
+                      <TableCell>{user.email || "Sin correo"}</TableCell>
+                      <TableCell>
+                        <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
+                          {user.role === 'admin' && 'Administrador'}
+                          {user.role === 'web_supervisor' && 'Supervisor Web'}
+                          {user.role === 'mobile_technician' && 'Técnico Móvil'}
+                          {user.role === 'mobile_citizen' && 'Ciudadano Móvil'}
+                          {user.role === 'unknown' && 'Sin rol asignado'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={user.active ? 'success' : 'destructive'}>
+                          {user.active ? 'Activo' : 'Inactivo'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="icon" onClick={() => handleEditUser(user)}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleDeleteUser(user.id)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </div>
         )}
+        
+        <Dialog open={openEditDialog} onOpenChange={setOpenEditDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Editar Usuario</DialogTitle>
+              <DialogDescription>
+                Actualice la información del usuario.
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleUpdateUser}>
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="editFirstName">Nombre</Label>
+                    <Input 
+                      id="editFirstName" 
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="editLastName">Apellido</Label>
+                    <Input 
+                      id="editLastName" 
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="editRole">Rol</Label>
+                  <Select 
+                    value={selectedRole} 
+                    onValueChange={setSelectedRole}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar rol" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="admin">Administrador</SelectItem>
+                      <SelectItem value="web_supervisor">Supervisor Web</SelectItem>
+                      <SelectItem value="mobile_technician">Técnico Móvil</SelectItem>
+                      <SelectItem value="mobile_citizen">Ciudadano Móvil</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="submit">Actualizar Usuario</Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
       </CardContent>
     </Card>
   );
