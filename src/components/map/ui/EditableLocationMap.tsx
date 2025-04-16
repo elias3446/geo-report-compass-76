@@ -4,12 +4,12 @@ import L from 'leaflet';
 import { getCoordinates } from '../utils/LocationUtils';
 import 'leaflet/dist/leaflet.css';
 import '../icons/fixLeafletIcon';
-import { toast } from 'sonner';
+import { toast } from '@/hooks/use-toast';
 
 interface EditableLocationMapProps {
   location: string;
   height?: string;
-  onLocationChange: (lat: number, lng: number) => void;
+  onLocationChange: (lat: number, lng: number, locationName?: string) => void;
 }
 
 const EditableLocationMap: React.FC<EditableLocationMapProps> = ({
@@ -134,7 +134,10 @@ const EditableLocationMap: React.FC<EditableLocationMapProps> = ({
       const newPosition: [number, number] = [latLng.lat, latLng.lng];
       
       // Show loading toast
-      const loadingToast = toast.loading('Obteniendo información de ubicación...');
+      toast({
+        title: "Cargando",
+        description: "Obteniendo información de ubicación...",
+      });
       
       // Fetch location information
       const locationName = await fetchLocationInfo(latLng.lat, latLng.lng);
@@ -157,12 +160,14 @@ const EditableLocationMap: React.FC<EditableLocationMapProps> = ({
       // Open the popup to show the new information
       marker.openPopup();
       
-      // Dismiss loading toast
-      toast.dismiss(loadingToast);
-      toast.success('Ubicación actualizada');
-      
       // Notify parent component with both coordinates and location name
       onLocationChange(latLng.lat, latLng.lng, locationName);
+      
+      // Show success toast
+      toast({
+        title: "Éxito",
+        description: "Ubicación actualizada correctamente",
+      });
     });
 
     // Save refs

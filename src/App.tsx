@@ -16,6 +16,7 @@ import NotFound from "./pages/NotFound";
 import Dashboard from "./pages/Dashboard";
 import { ReportProvider } from "./contexts/ReportContext";
 import { TimeFilterProvider } from "./context/TimeFilterContext";
+import { AuthProvider } from "./hooks/useAuth";
 
 const App = () => {
   // Create a new QueryClient instance inside the component
@@ -24,26 +25,28 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <ReportProvider>
-            <TimeFilterProvider>
-              <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/reports" element={<Reports />} />
-                <Route path="/reports/:id" element={<ReportDetail />} />
-                <Route path="/reports/:id/edit" element={<EditReport />} />
-                <Route path="/new-report" element={<NewReport />} />
-                <Route path="/map" element={<MapPage />} />
-                <Route path="/settings" element={<SettingsPage />} />
-                <Route path="/dashboard" element={<Dashboard />} />
-                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </TimeFilterProvider>
-          </ReportProvider>
-        </BrowserRouter>
+        <AuthProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <ReportProvider>
+              <TimeFilterProvider>
+                <Routes>
+                  <Route path="/" element={<Index />} />
+                  <Route path="/reports" element={<Reports />} />
+                  <Route path="/reports/:id" element={<ReportDetail />} />
+                  <Route path="/reports/:id/edit" element={<EditReport />} />
+                  <Route path="/new-report" element={<NewReport />} />
+                  <Route path="/map" element={<MapPage />} />
+                  <Route path="/settings" element={<SettingsPage />} />
+                  <Route path="/dashboard" element={<Dashboard />} />
+                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </TimeFilterProvider>
+            </ReportProvider>
+          </BrowserRouter>
+        </AuthProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );
