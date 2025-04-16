@@ -120,7 +120,7 @@ export const getReports = async (filters?: ReportFilters) => {
 
     if (error) throw error;
     
-    return data as SupabaseReport[];
+    return data as unknown as SupabaseReport[];
   } catch (error: any) {
     console.error('Error fetching reports:', error);
     toast.error('Error al cargar reportes: ' + error.message);
@@ -145,7 +145,7 @@ export const getReportById = async (id: string) => {
 
     if (error) throw error;
     
-    return data as SupabaseReport;
+    return data as unknown as SupabaseReport;
   } catch (error: any) {
     console.error('Error fetching report:', error);
     toast.error('Error al cargar el reporte: ' + error.message);
@@ -248,7 +248,6 @@ export const getReportsStats = async () => {
     // Get reports by status
     const { data: statusData, error: statusError } = await supabase
       .from('reports')
-      .select('status, count')
       .select('status')
       .then(({ data }) => {
         if (!data) return { data: null, error: new Error('No data returned') };
@@ -275,7 +274,6 @@ export const getReportsStats = async () => {
     // Get reports by category
     const { data: categoryCounts, error: categoryError } = await supabase
       .from('reports')
-      .select('category:categories(name), count')
       .select('category_id, categories(name)')
       .then(({ data }) => {
         if (!data) return { data: null, error: new Error('No data returned') };

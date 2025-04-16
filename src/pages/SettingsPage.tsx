@@ -7,6 +7,7 @@ import DatabaseDiagram from '@/components/database/DatabaseDiagram';
 import ProfileSettings from '@/components/settings/ProfileSettings';
 import DatabaseStatus from '@/components/settings/DatabaseStatus';
 import CategoriesManager from '@/components/settings/CategoriesManager';
+import UserManagement from '@/components/settings/UserManagement';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { LogOut } from 'lucide-react';
@@ -35,6 +36,9 @@ const SettingsPage = () => {
         <Tabs defaultValue="account" className="space-y-4">
           <TabsList>
             <TabsTrigger value="account">Cuenta</TabsTrigger>
+            {isAdmin() && (
+              <TabsTrigger value="users">Usuarios</TabsTrigger>
+            )}
             {hasAdminAccess && (
               <>
                 <TabsTrigger value="categories">Categorías</TabsTrigger>
@@ -48,6 +52,14 @@ const SettingsPage = () => {
               <ProfileSettings />
             </div>
           </TabsContent>
+          
+          {isAdmin() && (
+            <TabsContent value="users">
+              <div className="grid gap-6">
+                <UserManagement />
+              </div>
+            </TabsContent>
+          )}
           
           {hasAdminAccess && (
             <TabsContent value="categories">

@@ -18,6 +18,8 @@ interface AuthContextType extends AuthState {
   isWebSupervisor: () => boolean;
   isMobileCitizen: () => boolean;
   isMobileTechnician: () => boolean;
+  checkFirstUser: () => Promise<boolean>;
+  createFirstAdmin: (email: string, password: string, firstName: string, lastName: string) => Promise<{ error: any | null }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -45,12 +47,114 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
+  // Check if this is the first user in the system
+  const checkFirstUser = async () => {
+    try {
+      const { count, error } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true });
+      
+      if (error) {
+        console.error("Error checking first user:", error);
+        return false;
+      }
+      
+      return count === 0;
+    } catch (err) {
+      console.error("Error in checkFirstUser:", err);
+      return false;
+    }
+  };
+
+  // Create the first admin user
+  const createFirstAdmin = async (
+    email: string,
+    password: string,
+    firstName: string,
+    lastName: string
+  ) => {
+    try {
+      // Check if there are existing users
+      const isFirstUser = await checkFirstUser();
+      if (!isFirstUser) {
+        return { error: new Error("Ya existe un usuario en el sistema. No se puede crear el primer administrador.") };
+      }
+
+      // Sign up the user
+      const { error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            first_name: firstName,
+            last_name: lastName
+          }
+        }
+      });
+      
+      if (signUpError) {
+        return { error: signUpError };
+      }
+      
+      // Sign in the user
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+      
+      if (signInError) {
+        return { error: signInError };
+      }
+      
+      // Get the user ID
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        return { error: new Error("No se pudo obtener el usuario después del registro") };
+      }
+      
+      // Call the SQL function to make this user an admin
+      const { error: adminError } = await supabase.rpc('create_initial_admin', {
+        admin_email: email
+      });
+      
+      if (adminError) {
+        console.error("Error making user admin:", adminError);
+        return { error: adminError };
+      }
+      
+      toast({
+        title: "Administrador creado",
+        description: "Se ha creado el primer usuario administrador exitosamente"
+      });
+      
+      return { error: null };
+    } catch (error: any) {
+      console.error("Error in createFirstAdmin:", error);
+      return { error };
+    }
+  };
+
   const signUp = async (
     email: string, 
     password: string,
     metadata?: { first_name?: string; last_name?: string }
   ) => {
     try {
+      // First check if this would be the first user - if so, only allow admin creation
+      const isFirstUser = await checkFirstUser();
+      if (isFirstUser) {
+        return { 
+          error: new Error("Es el primer usuario del sistema. Por favor utilice el formulario de registro inicial para crear un administrador.")
+        };
+      }
+      
+      // Normal signup flow requires an admin to be logged in
+      if (!isAdmin()) {
+        return {
+          error: new Error("Solo los administradores pueden crear nuevos usuarios")
+        };
+      }
+      
       const { error } = await supabase.auth.signUp({
         email,
         password,
@@ -70,7 +174,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       toast({
         title: "Registro exitoso",
-        description: "Se ha enviado un correo de confirmación a tu dirección de email."
+        description: "Usuario creado correctamente."
       });
       
       return { error: null };
@@ -160,7 +264,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAdmin,
         isWebSupervisor,
         isMobileCitizen,
-        isMobileTechnician
+        isMobileTechnician,
+        checkFirstUser,
+        createFirstAdmin
       }}
     >
       {children}
