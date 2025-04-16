@@ -17,6 +17,8 @@ import Dashboard from "./pages/Dashboard";
 import { ReportProvider } from "./contexts/ReportContext";
 import { TimeFilterProvider } from "./context/TimeFilterContext";
 import { AuthProvider } from "./hooks/useAuth";
+import Auth from "./pages/Auth";
+import PrivateRoute from "./components/auth/PrivateRoute";
 
 const App = () => {
   // Create a new QueryClient instance inside the component
@@ -32,14 +34,15 @@ const App = () => {
             <ReportProvider>
               <TimeFilterProvider>
                 <Routes>
-                  <Route path="/" element={<Index />} />
-                  <Route path="/reports" element={<Reports />} />
-                  <Route path="/reports/:id" element={<ReportDetail />} />
-                  <Route path="/reports/:id/edit" element={<EditReport />} />
-                  <Route path="/new-report" element={<NewReport />} />
-                  <Route path="/map" element={<MapPage />} />
-                  <Route path="/settings" element={<SettingsPage />} />
-                  <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/auth" element={<Auth />} />
+                  <Route path="/" element={<PrivateRoute><Index /></PrivateRoute>} />
+                  <Route path="/reports" element={<PrivateRoute><Reports /></PrivateRoute>} />
+                  <Route path="/reports/:id" element={<PrivateRoute><ReportDetail /></PrivateRoute>} />
+                  <Route path="/reports/:id/edit" element={<PrivateRoute><EditReport /></PrivateRoute>} />
+                  <Route path="/new-report" element={<PrivateRoute><NewReport /></PrivateRoute>} />
+                  <Route path="/map" element={<PrivateRoute><MapPage /></PrivateRoute>} />
+                  <Route path="/settings" element={<PrivateRoute><SettingsPage /></PrivateRoute>} />
+                  <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>

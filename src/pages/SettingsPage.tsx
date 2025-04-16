@@ -1,56 +1,70 @@
 
 import React from 'react';
-import { AppLayout } from '@/components/layout/AppLayout';
+import AppLayout from '@/components/layout/AppLayout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import DatabaseDiagram from '@/components/database/DatabaseDiagram';
+import ProfileSettings from '@/components/settings/ProfileSettings';
+import DatabaseStatus from '@/components/settings/DatabaseStatus';
+import CategoriesManager from '@/components/settings/CategoriesManager';
+import { useAuth } from '@/hooks/useAuth';
+import { Button } from '@/components/ui/button';
+import { LogOut } from 'lucide-react';
 
 const SettingsPage = () => {
+  const { signOut, user, isAdmin, isWebSupervisor } = useAuth();
+
+  const handleLogout = async () => {
+    await signOut();
+  };
+
+  // Check if user has admin permissions
+  const hasAdminAccess = isAdmin() || isWebSupervisor();
+
   return (
     <AppLayout>
       <div className="container mx-auto py-6">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold tracking-tight">Configuración</h1>
+          <Button variant="outline" onClick={handleLogout}>
+            <LogOut className="h-4 w-4 mr-2" />
+            Cerrar sesión
+          </Button>
         </div>
 
-        <Tabs defaultValue="general" className="space-y-4">
+        <Tabs defaultValue="account" className="space-y-4">
           <TabsList>
-            <TabsTrigger value="general">General</TabsTrigger>
             <TabsTrigger value="account">Cuenta</TabsTrigger>
-            <TabsTrigger value="database">Base de Datos</TabsTrigger>
+            {hasAdminAccess && (
+              <>
+                <TabsTrigger value="categories">Categorías</TabsTrigger>
+                <TabsTrigger value="database">Base de Datos</TabsTrigger>
+              </>
+            )}
           </TabsList>
           
-          <TabsContent value="general">
-            <Card>
-              <CardHeader>
-                <CardTitle>Configuración General</CardTitle>
-                <CardDescription>
-                  Ajusta la configuración general de la aplicación
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <p>Configuración general de la aplicación. Esta sección será implementada en futuras actualizaciones.</p>
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
           <TabsContent value="account">
-            <Card>
-              <CardHeader>
-                <CardTitle>Configuración de la Cuenta</CardTitle>
-                <CardDescription>
-                  Administra tu perfil y configuración de cuenta
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <p>Configuración de cuenta del usuario. Esta sección será implementada en futuras actualizaciones.</p>
-              </CardContent>
-            </Card>
+            <div className="grid gap-6">
+              <ProfileSettings />
+            </div>
           </TabsContent>
           
-          <TabsContent value="database">
-            <DatabaseDiagram />
-          </TabsContent>
+          {hasAdminAccess && (
+            <TabsContent value="categories">
+              <div className="grid gap-6">
+                <CategoriesManager />
+              </div>
+            </TabsContent>
+          )}
+          
+          {hasAdminAccess && (
+            <TabsContent value="database">
+              <div className="grid gap-6">
+                <DatabaseStatus />
+                <DatabaseDiagram />
+              </div>
+            </TabsContent>
+          )}
         </Tabs>
       </div>
     </AppLayout>
