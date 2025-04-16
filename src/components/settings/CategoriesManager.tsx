@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
-import { ReloadIcon, PlusCircle, Trash2, Save } from "lucide-react";
+import { Loader, PlusCircle, Trash2, Save } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -352,7 +352,7 @@ const CategoriesManager: React.FC = () => {
       <CardContent>
         {loading ? (
           <div className="flex justify-center items-center py-6">
-            <ReloadIcon className="mr-2 h-6 w-6 animate-spin" />
+            <Loader className="mr-2 h-6 w-6 animate-spin" />
             <span>Cargando categorías...</span>
           </div>
         ) : categories.length === 0 ? (

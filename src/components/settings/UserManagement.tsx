@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
-import { ReloadIcon, PlusCircle, Lock, Unlock, UserX } from "lucide-react";
+import { Loader, PlusCircle, Lock, Unlock, UserX } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -103,13 +103,21 @@ const UserManagement: React.FC = () => {
       // Combine the data
       const usersWithRoles = profiles.map(profile => {
         const userRole = userRoles.find(ur => ur.user_id === profile.id);
-        const authUser = authUsers?.users?.find(au => au.id === profile.id);
+        let authUserEmail = 'No email available';
+        
+        // Safely access authUsers if it exists and has a users property
+        if (authUsers && authUsers.users) {
+          const authUser = authUsers.users.find(au => au.id === profile.id);
+          if (authUser && authUser.email) {
+            authUserEmail = authUser.email;
+          }
+        }
         
         return {
           id: profile.id,
           first_name: profile.first_name,
           last_name: profile.last_name,
-          email: authUser?.email || 'No email available',
+          email: authUserEmail,
           role: userRole?.role || 'unknown',
           active: profile.active
         };
@@ -401,7 +409,7 @@ const UserManagement: React.FC = () => {
       <CardContent>
         {loading ? (
           <div className="flex justify-center items-center py-6">
-            <ReloadIcon className="mr-2 h-6 w-6 animate-spin" />
+            <Loader className="mr-2 h-6 w-6 animate-spin" />
             <span>Cargando usuarios...</span>
           </div>
         ) : users.length === 0 ? (

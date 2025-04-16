@@ -8,6 +8,7 @@ import ProfileSettings from '@/components/settings/ProfileSettings';
 import DatabaseStatus from '@/components/settings/DatabaseStatus';
 import CategoriesManager from '@/components/settings/CategoriesManager';
 import UserManagement from '@/components/settings/UserManagement';
+import ZonesManager from '@/components/settings/ZonesManager';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { LogOut } from 'lucide-react';
@@ -41,6 +42,7 @@ const SettingsPage = () => {
             )}
             {hasAdminAccess && (
               <>
+                <TabsTrigger value="zones">Zonas</TabsTrigger>
                 <TabsTrigger value="categories">Categorías</TabsTrigger>
                 <TabsTrigger value="database">Base de Datos</TabsTrigger>
               </>
@@ -57,6 +59,14 @@ const SettingsPage = () => {
             <TabsContent value="users">
               <div className="grid gap-6">
                 <UserManagement />
+              </div>
+            </TabsContent>
+          )}
+          
+          {hasAdminAccess && (
+            <TabsContent value="zones">
+              <div className="grid gap-6">
+                <ZonesManager />
               </div>
             </TabsContent>
           )}
