@@ -11,9 +11,10 @@ import {
   TableCell 
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { EditIcon, Trash2Icon, MoreHorizontalIcon } from 'lucide-react';
+import { EditIcon, Trash2Icon, MoreHorizontalIcon, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Link } from 'react-router-dom';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,11 +23,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { registerAdminActivity } from '@/services/activityService';
 
 interface UserTableProps {
   users: User[];
   onEdit: (user: User) => void;
   onDelete: (userId: string) => void;
+  currentUser?: { id: string; name: string }; // Usuario actual para el registro de actividad
 }
 
 const roleColors = {
@@ -36,7 +39,27 @@ const roleColors = {
   viewer: 'bg-gray-100 text-gray-800 border-gray-200'
 };
 
-const UserTable: React.FC<UserTableProps> = ({ users, onEdit, onDelete }) => {
+const UserTable: React.FC<UserTableProps> = ({ 
+  users, 
+  onEdit, 
+  onDelete,
+  currentUser = { id: 'admin', name: 'Administrador' } // Valor por defecto
+}) => {
+  const handleDelete = (user: User) => {
+    // Registrar la actividad antes de eliminar
+    registerAdminActivity({
+      type: 'user_deleted',
+      title: 'Usuario eliminado',
+      description: `Se ha eliminado el usuario "${user.name}" (${user.email})`,
+      userId: currentUser.id,
+      userName: currentUser.name,
+      relatedItemId: user.id
+    });
+    
+    // Llamar a la función original de eliminación
+    onDelete(user.id);
+  };
+
   if (!users.length) {
     return (
       <div className="text-center py-10 text-gray-500">
@@ -70,7 +93,11 @@ const UserTable: React.FC<UserTableProps> = ({ users, onEdit, onDelete }) => {
                   </AvatarFallback>
                 </Avatar>
               </TableCell>
-              <TableCell className="font-medium">{user.name}</TableCell>
+              <TableCell className="font-medium">
+                <Link to={`/users/${user.id}`} className="hover:underline text-blue-600">
+                  {user.name}
+                </Link>
+              </TableCell>
               <TableCell>{user.email}</TableCell>
               <TableCell>
                 <Badge variant="outline" className={roleColors[user.role]}>
@@ -100,11 +127,17 @@ const UserTable: React.FC<UserTableProps> = ({ users, onEdit, onDelete }) => {
                   <DropdownMenuContent align="end">
                     <DropdownMenuLabel>Acciones</DropdownMenuLabel>
                     <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link to={`/users/${user.id}`}>
+                        <Eye className="mr-2 h-4 w-4" />
+                        Ver Detalles
+                      </Link>
+                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => onEdit(user)}>
                       <EditIcon className="mr-2 h-4 w-4" />
                       Editar
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => onDelete(user.id)} className="text-destructive">
+                    <DropdownMenuItem onClick={() => handleDelete(user)} className="text-destructive">
                       <Trash2Icon className="mr-2 h-4 w-4" />
                       Eliminar
                     </DropdownMenuItem>

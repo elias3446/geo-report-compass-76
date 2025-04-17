@@ -25,17 +25,23 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from "@/components/ui/use-toast";
+import { registerAdminActivity } from '@/services/activityService';
 
 interface SettingsFormProps {
   settings: SystemSetting[];
   onSave: (settings: SystemSetting[]) => void;
+  currentUser?: { id: string; name: string }; // Usuario actual para el registro de actividad
 }
 
 interface GroupedSettings {
   [key: string]: SystemSetting[];
 }
 
-const SettingsForm: React.FC<SettingsFormProps> = ({ settings, onSave }) => {
+const SettingsForm: React.FC<SettingsFormProps> = ({ 
+  settings, 
+  onSave,
+  currentUser = { id: 'admin', name: 'Administrador' } // Valor por defecto 
+}) => {
   const [activeTab, setActiveTab] = useState<string>('general');
   const form = useForm();
   
@@ -52,8 +58,18 @@ const SettingsForm: React.FC<SettingsFormProps> = ({ settings, onSave }) => {
   const groups = Object.keys(groupedSettings);
   
   const handleSubmit = () => {
-    // In a real implementation, we would collect all form values and update settings
+    // Registrar la actividad
+    registerAdminActivity({
+      type: 'setting_updated',
+      title: 'Configuración actualizada',
+      description: `Se ha actualizado la configuración del grupo "${activeTab}"`,
+      userId: currentUser.id,
+      userName: currentUser.name
+    });
+    
+    // Llamar a la función original
     onSave(settings);
+    
     toast({
       title: "Configuración guardada",
       description: "Los cambios han sido guardados correctamente.",

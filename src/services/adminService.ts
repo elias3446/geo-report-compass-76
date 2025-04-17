@@ -1,4 +1,3 @@
-
 import { User, Category, SystemSetting, Report, UserRole, MobileUserType } from '../types/admin';
 import { mockUsers, mockCategories, mockSettings, mockReports } from './mockData';
 
@@ -148,4 +147,9 @@ export const getReportsStats = () => {
     resolved: mockReports.filter(r => r.status === 'resolved').length,
     highPriority: mockReports.filter(r => r.priority === 'high').length
   };
+};
+
+// Añadimos la función para obtener reportes por categoría
+export const getReportsByCategoryId = (categoryId: string): Report[] => {
+  return mockReports.filter(report => report.categoryId === categoryId);
 };

@@ -30,12 +30,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { registerAdminActivity } from '@/services/activityService';
 
 interface CategoryFormProps {
   open: boolean;
   onClose: () => void;
   onSubmit: (data: Omit<Category, 'id' | 'createdAt'>) => void;
   initialData?: Category;
+  currentUser?: { id: string; name: string }; // Usuario actual para el registro de actividad
 }
 
 const iconOptions = [
@@ -54,7 +56,8 @@ const CategoryForm: React.FC<CategoryFormProps> = ({
   open, 
   onClose, 
   onSubmit, 
-  initialData 
+  initialData,
+  currentUser = { id: 'admin', name: 'Administrador' } // Valor por defecto
 }) => {
   const defaultValues = initialData 
     ? { ...initialData } 
@@ -77,6 +80,26 @@ const CategoryForm: React.FC<CategoryFormProps> = ({
   };
 
   const handleSubmit = (data: Omit<Category, 'id' | 'createdAt'>) => {
+    // Registrar la actividad antes de enviar los datos
+    if (initialData) {
+      registerAdminActivity({
+        type: 'category_updated',
+        title: 'Categoría actualizada',
+        description: `Se ha actualizado la categoría "${data.name}"`,
+        userId: currentUser.id,
+        userName: currentUser.name,
+        relatedItemId: initialData.id
+      });
+    } else {
+      registerAdminActivity({
+        type: 'category_created',
+        title: 'Categoría creada',
+        description: `Se ha creado una nueva categoría "${data.name}"`,
+        userId: currentUser.id,
+        userName: currentUser.name
+      });
+    }
+    
     onSubmit(data);
     handleClose(); // Aseguramos que el formulario se cierre después del envío
   };

@@ -16,6 +16,8 @@ import Help from "./pages/Help";
 import SettingsPage from "./pages/SettingsPage";
 import NotFound from "./pages/NotFound";
 import Dashboard from "./pages/Dashboard";
+import UserDetail from "./pages/UserDetail";
+import CategoryDetail from "./pages/CategoryDetail";
 import { ReportProvider } from "./contexts/ReportContext";
 import { TimeFilterProvider } from "./context/TimeFilterContext";
 
@@ -42,6 +44,8 @@ const App = () => {
                 <Route path="/help" element={<Help />} />
                 <Route path="/settings" element={<SettingsPage />} />
                 <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/users/:id" element={<UserDetail />} />
+                <Route path="/categories/:id" element={<CategoryDetail />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>

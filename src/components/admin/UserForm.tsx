@@ -29,19 +29,22 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { registerAdminActivity } from '@/services/activityService';
 
 interface UserFormProps {
   open: boolean;
   onClose: () => void;
   onSubmit: (data: Omit<User, 'id' | 'createdAt' | 'lastLogin'>) => void;
   initialData?: User;
+  currentUser?: { id: string; name: string }; // Usuario actual para el registro de actividad
 }
 
 const UserForm: React.FC<UserFormProps> = ({ 
   open, 
   onClose, 
   onSubmit, 
-  initialData 
+  initialData,
+  currentUser = { id: 'admin', name: 'Administrador' } // Valor por defecto
 }) => {
   const defaultValues = initialData 
   ? { ...initialData } 
@@ -71,6 +74,26 @@ const UserForm: React.FC<UserFormProps> = ({
     // Si no es usuario móvil, eliminamos el campo mobileUserType
     if (data.role !== 'mobile') {
       delete data.mobileUserType;
+    }
+    
+    // Registrar la actividad antes de enviar los datos
+    if (initialData) {
+      registerAdminActivity({
+        type: 'user_updated',
+        title: 'Usuario actualizado',
+        description: `Se ha actualizado la información del usuario "${data.name}"`,
+        userId: currentUser.id,
+        userName: currentUser.name,
+        relatedItemId: initialData.id
+      });
+    } else {
+      registerAdminActivity({
+        type: 'user_created',
+        title: 'Usuario creado',
+        description: `Se ha creado un nuevo usuario "${data.name}" con rol ${data.role}`,
+        userId: currentUser.id,
+        userName: currentUser.name
+      });
     }
     
     onSubmit(data);

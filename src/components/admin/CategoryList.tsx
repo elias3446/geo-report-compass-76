@@ -13,24 +13,59 @@ import {
   Trash2Icon, 
   EditIcon, 
   ToggleLeftIcon, 
-  ToggleRightIcon 
+  ToggleRightIcon,
+  Eye 
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Icons } from '../ui/icons';
+import { registerAdminActivity } from '@/services/activityService';
+import { Link } from 'react-router-dom';
 
 interface CategoryListProps {
   categories: Category[];
   onEdit: (category: Category) => void;
   onDelete: (categoryId: string) => void;
   onToggleActive: (categoryId: string, active: boolean) => void;
+  currentUser?: { id: string; name: string }; // Usuario actual para el registro de actividad
 }
 
 const CategoryList: React.FC<CategoryListProps> = ({ 
   categories, 
   onEdit, 
   onDelete,
-  onToggleActive
+  onToggleActive,
+  currentUser = { id: 'admin', name: 'Administrador' } // Valor por defecto
 }) => {
+  const handleDelete = (category: Category) => {
+    // Registrar la actividad antes de eliminar
+    registerAdminActivity({
+      type: 'category_deleted',
+      title: 'Categoría eliminada',
+      description: `Se ha eliminado la categoría "${category.name}"`,
+      userId: currentUser.id,
+      userName: currentUser.name,
+      relatedItemId: category.id
+    });
+    
+    // Llamar a la función original de eliminación
+    onDelete(category.id);
+  };
+
+  const handleToggleActive = (category: Category, active: boolean) => {
+    // Registrar la actividad antes de cambiar el estado
+    registerAdminActivity({
+      type: 'category_updated',
+      title: 'Estado de categoría cambiado',
+      description: `Se ha ${active ? 'activado' : 'desactivado'} la categoría "${category.name}"`,
+      userId: currentUser.id,
+      userName: currentUser.name,
+      relatedItemId: category.id
+    });
+    
+    // Llamar a la función original de toggle
+    onToggleActive(category.id, active);
+  };
+
   if (!categories.length) {
     return (
       <div className="text-center py-10 text-gray-500">
@@ -54,7 +89,9 @@ const CategoryList: React.FC<CategoryListProps> = ({
                   {/* Use createElement to properly render the icon component */}
                   {React.createElement(Icons[category.icon] || Icons.category)}
                 </span>
-                {category.name}
+                <Link to={`/categories/${category.id}`} className="hover:underline text-blue-600">
+                  {category.name}
+                </Link>
               </CardTitle>
               <Badge variant={category.active ? "outline" : "secondary"}>
                 {category.active ? 'Activa' : 'Inactiva'}
@@ -67,7 +104,17 @@ const CategoryList: React.FC<CategoryListProps> = ({
               <Button 
                 variant="ghost" 
                 size="sm" 
-                onClick={() => onToggleActive(category.id, !category.active)}
+                asChild
+              >
+                <Link to={`/categories/${category.id}`}>
+                  <Eye className="mr-1 h-4 w-4" />
+                  Ver
+                </Link>
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => handleToggleActive(category, !category.active)}
               >
                 {category.active ? (
                   <ToggleRightIcon className="mr-1 h-4 w-4" />
@@ -88,7 +135,7 @@ const CategoryList: React.FC<CategoryListProps> = ({
                 variant="ghost" 
                 size="sm" 
                 className="text-destructive" 
-                onClick={() => onDelete(category.id)}
+                onClick={() => handleDelete(category)}
               >
                 <Trash2Icon className="mr-1 h-4 w-4" />
                 Eliminar

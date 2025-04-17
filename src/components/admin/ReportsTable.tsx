@@ -20,6 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { registerAdminActivity } from '@/services/activityService';
 
 interface ReportsTableProps {
   reports: Report[];
@@ -28,6 +29,7 @@ interface ReportsTableProps {
   onViewReport: (reportId: string) => void;
   onUpdateStatus: (reportId: string, status: Report['status']) => void;
   onAssignReport: (reportId: string, userId: string) => void;
+  currentUser?: { id: string; name: string }; // Usuario actual para el registro de actividad
 }
 
 const statusColors = {
@@ -62,8 +64,50 @@ const ReportsTable: React.FC<ReportsTableProps> = ({
   users,
   onViewReport,
   onUpdateStatus,
-  onAssignReport
+  onAssignReport,
+  currentUser = { id: 'admin', name: 'Administrador' } // Valor por defecto
 }) => {
+  const handleUpdateStatus = (report: Report, newStatus: Report['status']) => {
+    // Registrar la actividad antes de cambiar el estado
+    registerAdminActivity({
+      type: 'report_status_changed',
+      title: 'Estado de reporte cambiado',
+      description: `Se ha cambiado el estado del reporte "${report.title}" a ${statusLabels[newStatus]}`,
+      userId: currentUser.id,
+      userName: currentUser.name,
+      relatedItemId: report.id,
+      relatedReportId: report.id // Para compatibilidad con ActivityList
+    });
+    
+    // Llamar a la función original
+    onUpdateStatus(report.id, newStatus);
+  };
+
+  const handleAssignReport = (report: Report, userId: string) => {
+    // Obtenemos el nombre del usuario asignado
+    const assignedUser = users.find(u => u.id === userId);
+    const userName = assignedUser ? assignedUser.name : 'No asignado';
+    
+    // Registrar la actividad
+    registerAdminActivity({
+      type: 'report_assigned',
+      title: 'Reporte asignado',
+      description: `Se ha asignado el reporte "${report.title}" a ${userName}`,
+      userId: currentUser.id,
+      userName: currentUser.name,
+      relatedItemId: report.id,
+      relatedReportId: report.id // Para compatibilidad con ActivityList
+    });
+    
+    // Llamar a la función original
+    onAssignReport(report.id, userId);
+  };
+
+  const handleViewReport = (reportId: string) => {
+    // No registramos actividad para simplemente ver un reporte
+    onViewReport(reportId);
+  };
+
   if (!reports.length) {
     return (
       <div className="text-center py-10 text-gray-500">
@@ -122,7 +166,7 @@ const ReportsTable: React.FC<ReportsTableProps> = ({
               <TableCell>
                 <Select
                   defaultValue={report.status}
-                  onValueChange={(value) => onUpdateStatus(report.id, value as Report['status'])}
+                  onValueChange={(value) => handleUpdateStatus(report, value as Report['status'])}
                 >
                   <SelectTrigger className={`w-[140px] ${statusColors[report.status]}`}>
                     <SelectValue />
@@ -139,7 +183,7 @@ const ReportsTable: React.FC<ReportsTableProps> = ({
               <TableCell>
                 <Select
                   defaultValue={report.assignedTo || "unassigned"}
-                  onValueChange={(value) => onAssignReport(report.id, value === "unassigned" ? "" : value)}
+                  onValueChange={(value) => handleAssignReport(report, value === "unassigned" ? "" : value)}
                 >
                   <SelectTrigger className="w-[140px]">
                     <SelectValue placeholder="Asignar..." />
@@ -159,7 +203,7 @@ const ReportsTable: React.FC<ReportsTableProps> = ({
                 <Button 
                   variant="ghost" 
                   size="sm" 
-                  onClick={() => onViewReport(report.id)}
+                  onClick={() => handleViewReport(report.id)}
                 >
                   <EyeIcon className="h-4 w-4 mr-1" />
                   Ver
