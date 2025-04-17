@@ -16,9 +16,9 @@ import { User, Category, SystemSetting, Report, UserRole } from '@/types/admin';
 import { 
   getUsers, getUsersByRole, searchUsers, getUsersStats, createUser, updateUser,
   getCategories, createCategory, updateCategory,
-  getSettings, updateSetting,
-  getReports, updateReportStatus
+  getSettings, updateSetting
 } from '@/services/adminService';
+import { useReports } from '@/contexts/ReportContext';
 
 const Admin = () => {
   // State for users tab
@@ -36,9 +36,6 @@ const Admin = () => {
   // State for settings tab
   const [settings, setSettings] = useState<SystemSetting[]>([]);
   
-  // State for reports tab
-  const [reports, setReports] = useState<Report[]>([]);
-  
   // Stats
   const [userStats, setUserStats] = useState({
     total: 0,
@@ -55,7 +52,6 @@ const Admin = () => {
     setUserStats(getUsersStats());
     setCategories(getCategories());
     setSettings(getSettings());
-    setReports(getReports());
   }, []);
 
   // Filter users based on search and role filter
@@ -121,10 +117,7 @@ const Admin = () => {
   };
 
   const handleEditUser = (user: User) => {
-    // Primero limpiar cualquier estado anterior antes de abrir el formulario de edición
     setEditingUser(undefined);
-    
-    // Después establecer el nuevo usuario a editar y abrir el formulario
     setTimeout(() => {
       setEditingUser(user);
       setUserFormOpen(true);
@@ -132,7 +125,6 @@ const Admin = () => {
   };
 
   const handleDeleteUser = (userId: string) => {
-    // This would be replaced with an API call in a real application
     setUsers(prevUsers => prevUsers.filter(user => user.id !== userId));
     setUserStats(getUsersStats());
     toast({
@@ -187,10 +179,7 @@ const Admin = () => {
   };
 
   const handleEditCategory = (category: Category) => {
-    // Primero limpiar cualquier estado anterior antes de abrir el formulario de edición
     setEditingCategory(undefined);
-    
-    // Después establecer la nueva categoría a editar y abrir el formulario
     setTimeout(() => {
       setEditingCategory(category);
       setCategoryFormOpen(true);
@@ -198,7 +187,6 @@ const Admin = () => {
   };
 
   const handleDeleteCategory = (categoryId: string) => {
-    // This would be replaced with an API call in a real application
     setCategories(prevCategories => prevCategories.filter(category => category.id !== categoryId));
     toast({
       title: "Categoría eliminada",
@@ -220,7 +208,6 @@ const Admin = () => {
   };
 
   const handleSaveSettings = (updatedSettings: SystemSetting[]) => {
-    // This would be replaced with API calls in a real application
     updatedSettings.forEach(setting => {
       updateSetting(setting.id, setting.value);
     });
@@ -228,37 +215,41 @@ const Admin = () => {
   };
 
   const handleViewReport = (reportId: string) => {
-    // This would navigate to the report detail page in a real application
     toast({
       title: "Ver reporte",
       description: `Navegando al detalle del reporte ${reportId}.`,
     });
   };
 
-  const handleUpdateReportStatus = (reportId: string, status: Report['status']) => {
-    const updatedReport = updateReportStatus(reportId, status);
-    if (updatedReport) {
-      setReports(prevReports => prevReports.map(report => 
-        report.id === reportId ? updatedReport : report
-      ));
-      toast({
-        title: "Estado actualizado",
-        description: `El estado del reporte ha sido actualizado correctamente.`,
-      });
-    }
+  const handleUpdateReportStatus = (reportId: string, status: string) => {
+    const { updateReport } = useReports();
+    updateReport(reportId, { status: status as 'draft' | 'submitted' | 'approved' | 'rejected' });
+    
+    toast({
+      title: "Estado actualizado",
+      description: `El estado del reporte ha sido actualizado correctamente.`,
+    });
   };
 
   const handleAssignReport = (reportId: string, userId: string) => {
-    const updatedReport = updateReportStatus(reportId, 'in-progress', userId);
-    if (updatedReport) {
-      setReports(prevReports => prevReports.map(report => 
-        report.id === reportId ? updatedReport : report
-      ));
-      toast({
-        title: "Reporte asignado",
-        description: `El reporte ha sido asignado correctamente.`,
-      });
-    }
+    const { updateReport } = useReports();
+    updateReport(reportId, { assignedTo: userId });
+    
+    toast({
+      title: "Reporte asignado",
+      description: `El reporte ha sido asignado correctamente.`,
+    });
+  };
+
+  // Get reports from context for the Reports tab
+  const { reports: contextReports } = useReports();
+  
+  // Calculate report counts
+  const reportCounts = {
+    total: contextReports.length,
+    pending: contextReports.filter(r => r.status === 'draft').length,
+    inProgress: contextReports.filter(r => r.status === 'submitted').length,
+    resolved: contextReports.filter(r => r.status === 'approved').length
   };
 
   return (
@@ -348,7 +339,6 @@ const Admin = () => {
               onDelete={handleDeleteUser}
             />
 
-            {/* User Form Dialog */}
             {userFormOpen && (
               <UserForm 
                 open={userFormOpen}
@@ -378,16 +368,14 @@ const Admin = () => {
               <div className="grid grid-cols-4 gap-4 mb-6">
                 <Card>
                   <CardContent className="pt-6">
-                    <div className="text-2xl font-bold">{reports.length}</div>
+                    <div className="text-2xl font-bold">{reportCounts.total}</div>
                     <p className="text-xs text-muted-foreground">Total reportes</p>
                   </CardContent>
                 </Card>
                 <Card>
                   <CardContent className="pt-6 flex items-center gap-2">
                     <div>
-                      <div className="text-2xl font-bold">
-                        {reports.filter(r => r.status === 'pending').length}
-                      </div>
+                      <div className="text-2xl font-bold">{reportCounts.pending}</div>
                       <p className="text-xs text-muted-foreground">Pendientes</p>
                     </div>
                     <AlertTriangle className="h-8 w-8 text-yellow-500 ml-auto" />
@@ -395,29 +383,23 @@ const Admin = () => {
                 </Card>
                 <Card>
                   <CardContent className="pt-6">
-                    <div className="text-2xl font-bold">
-                      {reports.filter(r => r.status === 'in-progress').length}
-                    </div>
+                    <div className="text-2xl font-bold">{reportCounts.inProgress}</div>
                     <p className="text-xs text-muted-foreground">En progreso</p>
                   </CardContent>
                 </Card>
                 <Card>
                   <CardContent className="pt-6">
-                    <div className="text-2xl font-bold">
-                      {reports.filter(r => r.status === 'resolved').length}
-                    </div>
+                    <div className="text-2xl font-bold">{reportCounts.resolved}</div>
                     <p className="text-xs text-muted-foreground">Resueltos</p>
                   </CardContent>
                 </Card>
               </div>
               
               <ReportsTable 
-                reports={reports}
-                categories={categories}
-                users={users}
                 onViewReport={handleViewReport}
                 onUpdateStatus={handleUpdateReportStatus}
                 onAssignReport={handleAssignReport}
+                currentUser={{ id: 'admin', name: 'Administrador' }}
               />
             </CardContent>
           </Card>
@@ -444,7 +426,6 @@ const Admin = () => {
             onToggleActive={handleToggleCategoryActive}
           />
 
-          {/* Category Form Dialog */}
           {categoryFormOpen && (
             <CategoryForm 
               open={categoryFormOpen}

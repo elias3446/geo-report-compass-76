@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 
 export interface GeoReport {
@@ -10,11 +9,12 @@ export interface GeoReport {
     lng: number;
     name: string;
   };
-  date: string; // This will now store a full ISO timestamp
+  date: string;
   status: 'draft' | 'submitted' | 'approved' | 'rejected';
   category: string;
   tags: string[];
-  createdAt: string; // Adding explicit createdAt timestamp
+  createdAt: string;
+  assignedTo?: string;
 }
 
 interface ReportContextType {
@@ -27,7 +27,6 @@ interface ReportContextType {
 
 const ReportContext = createContext<ReportContextType | undefined>(undefined);
 
-// Sample data
 const initialReports: GeoReport[] = [
   {
     id: '1',
@@ -42,7 +41,8 @@ const initialReports: GeoReport[] = [
     createdAt: '2025-03-15T10:30:00Z',
     status: 'approved',
     category: 'Environmental',
-    tags: ['coastal', 'erosion', 'annual']
+    tags: ['coastal', 'erosion', 'annual'],
+    assignedTo: 'John Doe'
   },
   {
     id: '2',
@@ -57,7 +57,8 @@ const initialReports: GeoReport[] = [
     createdAt: '2025-02-28T15:45:00Z',
     status: 'submitted',
     category: 'Urban Planning',
-    tags: ['urban', 'development', 'watershed']
+    tags: ['urban', 'development', 'watershed'],
+    assignedTo: 'Jane Smith'
   },
   {
     id: '3',
@@ -72,7 +73,8 @@ const initialReports: GeoReport[] = [
     createdAt: '2025-04-01T08:20:00Z',
     status: 'draft',
     category: 'Disaster Management',
-    tags: ['forest', 'fire', 'risk', 'climate']
+    tags: ['forest', 'fire', 'risk', 'climate'],
+    assignedTo: 'Alice Johnson'
   },
   {
     id: '4',
@@ -87,9 +89,9 @@ const initialReports: GeoReport[] = [
     createdAt: '2025-01-15T12:15:00Z',
     status: 'approved',
     category: 'Agriculture',
-    tags: ['soil', 'agriculture', 'contamination']
+    tags: ['soil', 'agriculture', 'contamination'],
+    assignedTo: 'Bob Brown'
   },
-  // Adding new report examples
   {
     id: '5',
     title: 'Mountain Glacier Retreat',
@@ -103,7 +105,8 @@ const initialReports: GeoReport[] = [
     createdAt: '2025-03-10T09:15:00Z',
     status: 'submitted',
     category: 'Climate Research',
-    tags: ['glacier', 'climate-change', 'mountains']
+    tags: ['glacier', 'climate-change', 'mountains'],
+    assignedTo: 'Charlie Davis'
   },
   {
     id: '6',
@@ -118,7 +121,8 @@ const initialReports: GeoReport[] = [
     createdAt: '2025-02-05T14:20:00Z',
     status: 'approved',
     category: 'Water Quality',
-    tags: ['pollution', 'river', 'industrial', 'contaminants']
+    tags: ['pollution', 'river', 'industrial', 'contaminants'],
+    assignedTo: 'David Wilson'
   },
   {
     id: '7',
@@ -133,7 +137,8 @@ const initialReports: GeoReport[] = [
     createdAt: '2025-03-25T11:00:00Z',
     status: 'submitted',
     category: 'Marine Biology',
-    tags: ['coral', 'ocean', 'temperature', 'climate']
+    tags: ['coral', 'ocean', 'temperature', 'climate'],
+    assignedTo: 'Eve Brown'
   },
   {
     id: '8',
@@ -148,7 +153,8 @@ const initialReports: GeoReport[] = [
     createdAt: '2025-01-30T10:45:00Z',
     status: 'rejected',
     category: 'Forest Conservation',
-    tags: ['deforestation', 'satellite', 'tropical', 'amazon']
+    tags: ['deforestation', 'satellite', 'tropical', 'amazon'],
+    assignedTo: 'Frank Smith'
   },
   {
     id: '9',
@@ -163,7 +169,8 @@ const initialReports: GeoReport[] = [
     createdAt: '2025-04-05T16:30:00Z',
     status: 'approved',
     category: 'Air Quality',
-    tags: ['pollution', 'urban', 'particulate', 'smog']
+    tags: ['pollution', 'urban', 'particulate', 'smog'],
+    assignedTo: 'Grace Johnson'
   },
   {
     id: '10',
@@ -178,7 +185,8 @@ const initialReports: GeoReport[] = [
     createdAt: '2025-02-20T13:15:00Z',
     status: 'draft',
     category: 'Ecosystem Conservation',
-    tags: ['wetland', 'biodiversity', 'habitat', 'conservation']
+    tags: ['wetland', 'biodiversity', 'habitat', 'conservation'],
+    assignedTo: 'Hannah Davis'
   },
   {
     id: '11',
@@ -193,7 +201,8 @@ const initialReports: GeoReport[] = [
     createdAt: '2025-03-05T11:20:00Z',
     status: 'submitted',
     category: 'Water Resources',
-    tags: ['groundwater', 'aquifer', 'agriculture', 'drought']
+    tags: ['groundwater', 'aquifer', 'agriculture', 'drought'],
+    assignedTo: 'Ivy Brown'
   },
   {
     id: '12',
@@ -208,7 +217,8 @@ const initialReports: GeoReport[] = [
     createdAt: '2025-01-25T09:45:00Z',
     status: 'approved',
     category: 'Renewable Energy',
-    tags: ['wind', 'birds', 'migration', 'offshore']
+    tags: ['wind', 'birds', 'migration', 'offshore'],
+    assignedTo: 'Jack Wilson'
   },
   {
     id: '13',
@@ -223,7 +233,8 @@ const initialReports: GeoReport[] = [
     createdAt: '2025-04-10T14:50:00Z',
     status: 'draft',
     category: 'Soil Conservation',
-    tags: ['erosion', 'agriculture', 'rainfall', 'topsoil']
+    tags: ['erosion', 'agriculture', 'rainfall', 'topsoil'],
+    assignedTo: 'Olivia Davis'
   },
   {
     id: '14',
@@ -238,7 +249,8 @@ const initialReports: GeoReport[] = [
     createdAt: '2025-02-12T10:30:00Z',
     status: 'submitted',
     category: 'Invasive Species',
-    tags: ['invasive', 'aquatic', 'lakes', 'ecosystem']
+    tags: ['invasive', 'aquatic', 'lakes', 'ecosystem'],
+    assignedTo: 'Paul Brown'
   },
   {
     id: '15',
@@ -253,7 +265,8 @@ const initialReports: GeoReport[] = [
     createdAt: '2025-03-20T09:40:00Z',
     status: 'approved',
     category: 'Hydrology',
-    tags: ['snowpack', 'mountains', 'water-supply', 'climate']
+    tags: ['snowpack', 'mountains', 'water-supply', 'climate'],
+    assignedTo: 'Quinn Davis'
   }
 ];
 
@@ -265,7 +278,7 @@ export const ReportProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     const newReport: GeoReport = {
       ...reportData,
       id: Date.now().toString(),
-      createdAt: now, // Add current timestamp
+      createdAt: now,
     };
     
     setReports(prev => [...prev, newReport]);

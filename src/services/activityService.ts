@@ -11,6 +11,7 @@ export interface AdminActivity {
   userId: string;
   userName: string;
   relatedItemId?: string;
+  relatedReportId?: string;
 }
 
 // Almacenamiento en memoria para las actividades

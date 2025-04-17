@@ -1,6 +1,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import UserForm from "@/components/admin/UserForm";
 import AppLayout from "@/components/layout/AppLayout";
 import {
   Card,
@@ -22,7 +23,7 @@ import {
   AlertCircle,
   Shield
 } from "lucide-react";
-import { getUserById } from "@/services/adminService";
+import { getUserById, updateUser } from "@/services/adminService";
 import { User as UserType, UserRole } from "@/types/admin";
 import { format } from 'date-fns';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -43,6 +44,7 @@ const UserDetail = () => {
   const [user, setUser] = useState<UserType | null>(null);
   const [activities, setActivities] = useState<AdminActivity[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -218,11 +220,26 @@ const UserDetail = () => {
           <CardFooter className="border-t pt-6">
             <Button
               variant="outline"
-              onClick={() => navigate("/admin?tab=users&edit=" + user.id)}
+              onClick={() => setIsEditDialogOpen(true)}
             >
               <Edit className="mr-2 h-4 w-4" />
               Editar Usuario
             </Button>
+            {user && (
+              <UserForm
+                open={isEditDialogOpen}
+                onClose={() => setIsEditDialogOpen(false)}
+                initialData={user}
+                onSubmit={(updatedData) => {
+                  if (id) {
+                    const updatedUser = updateUser(id, updatedData);
+                    if (updatedUser) {
+                      setUser(updatedUser);
+                    }
+                  }
+                }}
+              />
+            )}
           </CardFooter>
         </Card>
         

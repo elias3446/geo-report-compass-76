@@ -1,8 +1,5 @@
+import { User, Category, SystemSetting, Report, ReportStatus } from '../types/admin';
 
-import { User, Category, SystemSetting, Report } from '../types/admin';
-import { subDays, subHours, subMinutes } from 'date-fns';
-
-// Mock Users
 export const mockUsers: User[] = [
   {
     id: '1',
@@ -10,9 +7,9 @@ export const mockUsers: User[] = [
     email: 'admin@example.com',
     role: 'admin',
     active: true,
-    lastLogin: subHours(new Date(), 2),
-    createdAt: subDays(new Date(), 120),
-    avatar: 'https://randomuser.me/api/portraits/men/1.jpg'
+    createdAt: new Date('2024-01-01'),
+    lastLogin: new Date('2024-03-15'),
+    avatar: '/avatars/admin.jpg'
   },
   {
     id: '2',
@@ -20,240 +17,202 @@ export const mockUsers: User[] = [
     email: 'supervisor@example.com',
     role: 'supervisor',
     active: true,
-    lastLogin: subDays(new Date(), 1),
-    createdAt: subDays(new Date(), 30),
-    avatar: 'https://randomuser.me/api/portraits/women/2.jpg'
+    createdAt: new Date('2024-01-15'),
+    lastLogin: new Date('2024-03-20'),
+    avatar: '/avatars/supervisor.jpg'
   },
   {
     id: '3',
-    name: 'Usuario Móvil',
-    email: 'movil@example.com',
+    name: 'Usuario Móvil Ciudadano',
+    email: 'mobile.citizen@example.com',
     role: 'mobile',
     active: true,
-    lastLogin: subHours(new Date(), 6),
-    createdAt: subDays(new Date(), 15),
-    avatar: 'https://randomuser.me/api/portraits/men/3.jpg'
+    createdAt: new Date('2024-02-01'),
+    lastLogin: new Date('2024-03-25'),
+    mobileUserType: 'citizen',
+    avatar: '/avatars/mobile-citizen.jpg'
   },
   {
     id: '4',
-    name: 'Segundo Supervisor',
-    email: 'supervisor2@example.com',
-    role: 'supervisor',
-    active: true,
-    lastLogin: subDays(new Date(), 3),
-    createdAt: subDays(new Date(), 45),
-    avatar: 'https://randomuser.me/api/portraits/women/4.jpg'
-  },
-  {
-    id: '5',
-    name: 'Usuario Inactivo',
-    email: 'inactivo@example.com',
+    name: 'Usuario Móvil Técnico',
+    email: 'mobile.technician@example.com',
     role: 'mobile',
     active: false,
-    lastLogin: subDays(new Date(), 90),
-    createdAt: subDays(new Date(), 180),
-    avatar: 'https://randomuser.me/api/portraits/men/5.jpg'
-  },
-  {
-    id: '6',
-    name: 'Nuevo Usuario',
-    email: 'nuevo@example.com',
-    role: 'viewer',
-    active: true,
-    createdAt: subHours(new Date(), 12),
-    avatar: 'https://randomuser.me/api/portraits/women/6.jpg'
-  },
-  {
-    id: '7',
-    name: 'Admin Secundario',
-    email: 'admin2@example.com',
-    role: 'admin',
-    active: true,
-    lastLogin: subDays(new Date(), 5),
-    createdAt: subDays(new Date(), 100),
-    avatar: 'https://randomuser.me/api/portraits/men/7.jpg'
-  }
-];
-
-// Mock Categories
-export const mockCategories: Category[] = [
-  {
-    id: '1',
-    name: 'Alumbrado Público',
-    description: 'Problemas con el alumbrado de calles y parques',
-    color: '#FFD700',
-    icon: 'lightbulb',
-    active: true,
-    createdAt: subDays(new Date(), 200)
-  },
-  {
-    id: '2',
-    name: 'Residuos y Limpieza',
-    description: 'Acumulación de basura o falta de limpieza en espacios públicos',
-    color: '#00CED1',
-    icon: 'trash',
-    active: true,
-    createdAt: subDays(new Date(), 190)
-  },
-  {
-    id: '3',
-    name: 'Vías Públicas',
-    description: 'Problemas en calles, aceras o señalización',
-    color: '#FF6347',
-    icon: 'road',
-    active: true,
-    createdAt: subDays(new Date(), 180)
-  },
-  {
-    id: '4',
-    name: 'Parques y Jardines',
-    description: 'Mantenimiento de áreas verdes y juegos infantiles',
-    color: '#32CD32',
-    icon: 'tree',
-    active: true,
-    createdAt: subDays(new Date(), 170)
+    createdAt: new Date('2024-02-15'),
+    lastLogin: new Date('2024-03-30'),
+    mobileUserType: 'technician',
+    avatar: '/avatars/mobile-technician.jpg'
   },
   {
     id: '5',
-    name: 'Mobiliario Urbano',
-    description: 'Daños en bancos, papeleras u otros elementos urbanos',
-    color: '#9370DB',
-    icon: 'bench',
+    name: 'Visualizador de Reportes',
+    email: 'viewer@example.com',
+    role: 'viewer',
     active: true,
-    createdAt: subDays(new Date(), 160)
-  }
+    createdAt: new Date('2024-03-01'),
+    lastLogin: null,
+    avatar: '/avatars/viewer.jpg'
+  },
 ];
 
-// Mock System Settings
+export const mockCategories: Category[] = [
+  {
+    id: 'cat-1',
+    name: 'Alumbrado Público',
+    description: 'Problemas relacionados con el alumbrado público',
+    color: '#FFA000',
+    icon: 'lightbulb',
+    active: true,
+    createdAt: new Date('2024-01-01')
+  },
+  {
+    id: 'cat-2',
+    name: 'Recolección de Basura',
+    description: 'Problemas relacionados con la recolección de basura',
+    color: '#4CAF50',
+    icon: 'trash',
+    active: true,
+    createdAt: new Date('2024-01-01')
+  },
+  {
+    id: 'cat-3',
+    name: 'Estado de las Calles',
+    description: 'Problemas relacionados con el estado de las calles',
+    color: '#F44336',
+    icon: 'road',
+    active: true,
+    createdAt: new Date('2024-01-01')
+  },
+  {
+    id: 'cat-4',
+    name: 'Parques y Jardines',
+    description: 'Problemas relacionados con parques y jardines',
+    color: '#8BC34A',
+    icon: 'tree',
+    active: true,
+    createdAt: new Date('2024-01-01')
+  },
+  {
+    id: 'cat-5',
+    name: 'Mobiliario Urbano',
+    description: 'Problemas relacionados con el mobiliario urbano',
+    color: '#607D8B',
+    icon: 'bench',
+    active: true,
+    createdAt: new Date('2024-01-01')
+  },
+];
+
 export const mockSettings: SystemSetting[] = [
   {
-    id: '1',
-    key: 'app.name',
-    value: 'GeoReport',
+    id: 'setting-1',
+    key: 'app_name',
+    value: 'City Services App',
     description: 'Nombre de la aplicación',
     group: 'general'
   },
   {
-    id: '2',
-    key: 'app.logo',
-    value: '/logo.png',
-    description: 'Ruta del logotipo de la aplicación',
+    id: 'setting-2',
+    key: 'contact_email',
+    value: 'contact@example.com',
+    description: 'Email de contacto',
     group: 'general'
   },
   {
-    id: '3',
-    key: 'map.initialZoom',
-    value: '13',
-    description: 'Nivel de zoom inicial del mapa',
+    id: 'setting-3',
+    key: 'api_url',
+    value: 'https://api.example.com',
+    description: 'URL de la API',
+    group: 'api'
+  },
+  {
+    id: 'setting-4',
+    key: 'map_provider',
+    value: 'Google Maps',
+    description: 'Proveedor de mapas',
     group: 'map'
   },
-  {
-    id: '4',
-    key: 'map.center',
-    value: '40.416775,-3.703790',
-    description: 'Coordenadas iniciales del mapa (lat, lng)',
-    group: 'map'
-  },
-  {
-    id: '5',
-    key: 'notifications.email',
-    value: 'true',
-    description: 'Activar notificaciones por email',
-    group: 'notifications'
-  },
-  {
-    id: '6',
-    key: 'notifications.push',
-    value: 'true',
-    description: 'Activar notificaciones push',
-    group: 'notifications'
-  },
-  {
-    id: '7',
-    key: 'reports.requireApproval',
-    value: 'true',
-    description: 'Requerir aprobación para publicar reportes',
-    group: 'reports'
-  }
 ];
 
-// Mock Reports
 export const mockReports: Report[] = [
   {
-    id: '1',
-    title: 'Farola sin luz en Calle Principal',
-    description: 'La farola de la esquina entre Calle Principal y Avenida Central lleva 3 días sin funcionar',
-    categoryId: '1',
+    id: 'rep-1',
+    title: 'Farola dañada',
+    description: 'La farola de la calle principal no funciona',
     status: 'pending',
-    priority: 'medium',
+    category: 'cat-1',
     location: {
-      latitude: 40.416775,
-      longitude: -3.703790,
-      address: 'Calle Principal 123, Madrid'
+      name: 'Calle Principal 123',
+      lat: 40.416775,
+      lng: -3.703790
     },
-    createdBy: '3',
-    createdAt: subDays(new Date(), 5),
-    updatedAt: subDays(new Date(), 5),
-    comments: [
-      {
-        id: '101',
-        reportId: '1',
-        userId: '3',
-        content: 'Sigue sin funcionar la farola',
-        createdAt: subDays(new Date(), 3)
-      }
-    ]
-  },
-  {
-    id: '2',
-    title: 'Acumulación de basura en el parque',
-    description: 'Hay una gran cantidad de basura acumulada en el Parque Central, cerca de la zona infantil',
-    categoryId: '2',
-    status: 'in-progress',
+    date: new Date('2024-03-01'),
+    tags: ['urgent', 'night'],
     priority: 'high',
-    location: {
-      latitude: 40.419974,
-      longitude: -3.700337,
-      address: 'Parque Central, Madrid'
-    },
-    createdBy: '3',
-    assignedTo: '2',
-    createdAt: subDays(new Date(), 3),
-    updatedAt: subHours(new Date(), 12),
-    comments: [
-      {
-        id: '201',
-        reportId: '2',
-        userId: '2',
-        content: 'Programada limpieza para mañana',
-        createdAt: subHours(new Date(), 12)
-      }
-    ]
+    updatedAt: new Date('2024-03-15')
   },
   {
-    id: '3',
-    title: 'Banco roto en la plaza',
-    description: 'Uno de los bancos de la Plaza Mayor tiene varios listones rotos',
-    categoryId: '5',
-    status: 'resolved',
-    priority: 'low',
+    id: 'rep-2',
+    title: 'Contenedor de basura lleno',
+    description: 'El contenedor de basura en la esquina está lleno y desbordando',
+    status: 'in-progress',
+    category: 'cat-2',
     location: {
-      latitude: 40.415511,
-      longitude: -3.707803,
-      address: 'Plaza Mayor, Madrid'
+      name: 'Esquina Calle A y Calle B',
+      lat: 40.416775,
+      lng: -3.703790
     },
-    createdBy: '6',
-    assignedTo: '4',
-    createdAt: subDays(new Date(), 10),
-    updatedAt: subDays(new Date(), 1),
-    comments: [
-      {
-        id: '301',
-        reportId: '3',
-        userId: '4',
-        content: 'Reparación completada',
-        createdAt: subDays(new Date(), 1)
-      }
-    ]
-  }
+    date: new Date('2024-03-05'),
+    tags: ['garbage', 'overflow'],
+    priority: 'medium',
+    updatedAt: new Date('2024-03-20')
+  },
+  {
+    id: 'rep-3',
+    title: 'Bache en la carretera',
+    description: 'Hay un bache grande en la carretera que dificulta la circulación',
+    status: 'resolved',
+    category: 'cat-3',
+    location: {
+      name: 'Carretera XYZ Km 5',
+      lat: 40.416775,
+      lng: -3.703790
+    },
+    date: new Date('2024-03-10'),
+    tags: ['road', 'damage'],
+    priority: 'high',
+    updatedAt: new Date('2024-03-25')
+  },
+  {
+    id: 'rep-4',
+    title: 'Árbol caído en el parque',
+    description: 'Un árbol se ha caído en el parque debido a la tormenta',
+    status: 'approved',
+    category: 'cat-4',
+    location: {
+      name: 'Parque Central',
+      lat: 40.416775,
+      lng: -3.703790
+    },
+    date: new Date('2024-03-15'),
+    tags: ['tree', 'storm'],
+    priority: 'medium',
+    updatedAt: new Date('2024-03-30')
+  },
+  {
+    id: 'rep-5',
+    title: 'Banco roto en la plaza',
+    description: 'Un banco en la plaza principal está roto y necesita reparación',
+    status: 'rejected',
+    category: 'cat-5',
+    location: {
+      name: 'Plaza Principal',
+      lat: 40.416775,
+      lng: -3.703790
+    },
+    date: new Date('2024-03-20'),
+    tags: ['bench', 'broken'],
+    priority: 'low',
+    updatedAt: new Date('2024-04-01')
+  },
 ];

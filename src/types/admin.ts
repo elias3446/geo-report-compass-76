@@ -1,6 +1,3 @@
-export type UserRole = 'admin' | 'supervisor' | 'mobile' | 'viewer';
-
-export type MobileUserType = 'citizen' | 'technician';
 
 export interface User {
   id: string;
@@ -8,12 +5,15 @@ export interface User {
   email: string;
   role: UserRole;
   active: boolean;
-  lastLogin?: Date;
   createdAt: Date;
+  lastLogin: Date | null;
   avatar?: string;
   mobileUserType?: MobileUserType;
-  password?: string;
+  password?: string; // Optional for updates
 }
+
+export type UserRole = 'admin' | 'supervisor' | 'mobile' | 'viewer';
+export type MobileUserType = 'citizen' | 'technician';
 
 export interface Category {
   id: string;
@@ -37,36 +37,20 @@ export interface Report {
   id: string;
   title: string;
   description: string;
-  categoryId: string;
-  status: 'pending' | 'in-progress' | 'resolved' | 'rejected';
-  priority: 'low' | 'medium' | 'high';
-  location: {
-    latitude: number;
-    longitude: number;
-    address?: string;
-  };
-  createdBy: string;
+  status: ReportStatus;
+  category: string;
+  location: Location;
+  date: Date;
   assignedTo?: string;
-  createdAt: Date;
-  updatedAt: Date;
-  comments?: ReportComment[];
-  attachments?: Attachment[];
+  tags: string[];
+  priority?: 'low' | 'medium' | 'high';
+  updatedAt?: Date;
 }
 
-export interface ReportComment {
-  id: string;
-  reportId: string;
-  userId: string;
-  content: string;
-  createdAt: Date;
-}
+export type ReportStatus = 'draft' | 'submitted' | 'approved' | 'rejected' | 'pending' | 'in-progress' | 'resolved';
 
-export interface Attachment {
-  id: string;
-  reportId: string;
-  fileName: string;
-  fileType: string;
-  fileSize: number;
-  url: string;
-  createdAt: Date;
+export interface Location {
+  name: string;
+  lat: number;
+  lng: number;
 }

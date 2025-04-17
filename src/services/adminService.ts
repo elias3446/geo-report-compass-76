@@ -1,5 +1,6 @@
-import { User, Category, SystemSetting, Report, UserRole, MobileUserType } from '../types/admin';
+import { User, Category, SystemSetting, Report, UserRole, MobileUserType, ReportStatus } from '../types/admin';
 import { mockUsers, mockCategories, mockSettings, mockReports } from './mockData';
+import { UserFormData } from '@/hooks/useUserForm';
 
 // User management functions
 export const getUsers = (): User[] => {
@@ -24,33 +25,26 @@ export const getUserById = (id: string): User | undefined => {
 };
 
 // This would communicate with a backend in a real implementation
-export const createUser = (userData: Omit<User, 'id' | 'createdAt'>): User => {
-  // In a real implementation, the password would be hashed before storing
+export const createUser = (userData: UserFormData): User => {
   const newUser: User = {
     id: `user-${mockUsers.length + 1}`,
     ...userData,
-    createdAt: new Date()
+    createdAt: new Date(),
+    lastLogin: null
   };
   
-  // Remove password from the stored user object for security
-  // In a real implementation, the password would be stored hashed in a secure way
-  const { password, ...userWithoutPassword } = newUser;
-  const userToStore = { ...userWithoutPassword } as User;
-  
-  mockUsers.push(userToStore);
-  return userToStore;
+  mockUsers.push(newUser);
+  return newUser;
 };
 
-export const updateUser = (id: string, userData: Partial<User>): User | null => {
+export const updateUser = (id: string, userData: Partial<UserFormData>): User | null => {
   const index = mockUsers.findIndex(user => user.id === id);
   if (index === -1) return null;
   
-  // If password is empty, don't update it
-  if (userData.password === '') {
+  if (!userData.password) {
     const { password, ...dataWithoutPassword } = userData;
     mockUsers[index] = { ...mockUsers[index], ...dataWithoutPassword };
   } else {
-    // In a real implementation, the password would be hashed before storing
     mockUsers[index] = { ...mockUsers[index], ...userData };
   }
   
@@ -151,5 +145,5 @@ export const getReportsStats = () => {
 
 // Añadimos la función para obtener reportes por categoría
 export const getReportsByCategoryId = (categoryId: string): Report[] => {
-  return mockReports.filter(report => report.categoryId === categoryId);
+  return mockReports.filter(report => report.category === categoryId);
 };

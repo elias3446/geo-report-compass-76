@@ -1,7 +1,7 @@
-
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import AppLayout from "@/components/layout/AppLayout";
+import CategoryForm from "@/components/admin/CategoryForm";
 import {
   Card,
   CardContent,
@@ -21,7 +21,7 @@ import {
   Info,
   FileText
 } from "lucide-react";
-import { getCategoryById } from "@/services/adminService";
+import { getCategoryById, updateCategory } from "@/services/adminService";
 import { Category } from "@/types/admin";
 import { format } from 'date-fns';
 import { Icons } from '@/components/ui/icons';
@@ -38,6 +38,7 @@ const CategoryDetail = () => {
   const [activities, setActivities] = useState<AdminActivity[]>([]);
   const [relatedReports, setRelatedReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -48,7 +49,6 @@ const CategoryDetail = () => {
         const categoryActivities = getActivitiesByCategoryId(id);
         setActivities(categoryActivities);
         
-        // Obtener reportes relacionados con esta categoría
         const reports = getReportsByCategoryId(id);
         setRelatedReports(reports);
       }
@@ -105,7 +105,6 @@ const CategoryDetail = () => {
     );
   }
 
-  // Renderiza el ícono de la categoría
   const CategoryIcon = Icons[category.icon] || Icons.category;
 
   return (
@@ -210,11 +209,26 @@ const CategoryDetail = () => {
           <CardFooter className="border-t pt-6">
             <Button
               variant="outline"
-              onClick={() => navigate("/admin?tab=categories&edit=" + category.id)}
+              onClick={() => setIsEditDialogOpen(true)}
             >
               <Edit className="mr-2 h-4 w-4" />
               Editar Categoría
             </Button>
+            {category && (
+              <CategoryForm
+                open={isEditDialogOpen}
+                onClose={() => setIsEditDialogOpen(false)}
+                initialData={category}
+                onSubmit={(updatedData) => {
+                  if (id) {
+                    const updatedCategory = updateCategory(id, updatedData);
+                    if (updatedCategory) {
+                      setCategory(updatedCategory);
+                    }
+                  }
+                }}
+              />
+            )}
           </CardFooter>
         </Card>
         
