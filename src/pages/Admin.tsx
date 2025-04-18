@@ -18,7 +18,7 @@ import {
   getCategories, createCategory, updateCategory,
   getSettings, updateSetting
 } from '@/services/adminService';
-import { useReports } from '@/contexts/ReportContext';
+import { getReports } from '@/services/reportService';
 
 const Admin = () => {
   // State for users tab
@@ -45,13 +45,33 @@ const Admin = () => {
     mobile: 0
   });
 
+  // Reports
+  const [reports, setReports] = useState<any[]>([]);
+  const [reportCounts, setReportCounts] = useState({
+    total: 0,
+    pending: 0,
+    inProgress: 0,
+    resolved: 0
+  });
+
   // Load initial data
   useEffect(() => {
     const allUsers = getUsers();
+    const allReports = getReports();
+    
     setUsers(allUsers);
+    setReports(allReports);
     setUserStats(getUsersStats());
     setCategories(getCategories());
     setSettings(getSettings());
+    
+    // Calculate report counts based on actual data
+    setReportCounts({
+      total: allReports.length,
+      pending: allReports.filter(r => r.status === 'Open' || r.status === 'draft').length,
+      inProgress: allReports.filter(r => r.status === 'In Progress' || r.status === 'submitted').length,
+      resolved: allReports.filter(r => r.status === 'Resolved' || r.status === 'approved').length
+    });
   }, []);
 
   // Filter users based on search and role filter
@@ -207,6 +227,7 @@ const Admin = () => {
     }
   };
 
+  // Settings handlers
   const handleSaveSettings = (updatedSettings: SystemSetting[]) => {
     updatedSettings.forEach(setting => {
       updateSetting(setting.id, setting.value);
@@ -214,16 +235,25 @@ const Admin = () => {
     setSettings([...updatedSettings]);
   };
 
-  const handleViewReport = (reportId: string) => {
-    toast({
-      title: "Ver reporte",
-      description: `Navegando al detalle del reporte ${reportId}.`,
-    });
-  };
-
+  // Report handlers
   const handleUpdateReportStatus = (reportId: string, status: string) => {
-    const { updateReport } = useReports();
-    updateReport(reportId, { status: status as 'draft' | 'submitted' | 'approved' | 'rejected' });
+    // Update the local state for immediate UI feedback
+    const updatedReports = reports.map(report => {
+      if (report.id.toString() === reportId) {
+        return { ...report, status };
+      }
+      return report;
+    });
+    
+    setReports(updatedReports);
+    
+    // Recalculate counts
+    setReportCounts({
+      total: updatedReports.length,
+      pending: updatedReports.filter(r => r.status === 'Open' || r.status === 'draft').length,
+      inProgress: updatedReports.filter(r => r.status === 'In Progress' || r.status === 'submitted').length,
+      resolved: updatedReports.filter(r => r.status === 'Resolved' || r.status === 'approved').length
+    });
     
     toast({
       title: "Estado actualizado",
@@ -232,24 +262,20 @@ const Admin = () => {
   };
 
   const handleAssignReport = (reportId: string, userId: string) => {
-    const { updateReport } = useReports();
-    updateReport(reportId, { assignedTo: userId });
+    // Update the local state for immediate UI feedback
+    const updatedReports = reports.map(report => {
+      if (report.id.toString() === reportId) {
+        return { ...report, assignedTo: userId };
+      }
+      return report;
+    });
+    
+    setReports(updatedReports);
     
     toast({
       title: "Reporte asignado",
       description: `El reporte ha sido asignado correctamente.`,
     });
-  };
-
-  // Get reports from context for the Reports tab
-  const { reports: contextReports } = useReports();
-  
-  // Calculate report counts
-  const reportCounts = {
-    total: contextReports.length,
-    pending: contextReports.filter(r => r.status === 'draft').length,
-    inProgress: contextReports.filter(r => r.status === 'submitted').length,
-    resolved: contextReports.filter(r => r.status === 'approved').length
   };
 
   return (
@@ -396,7 +422,6 @@ const Admin = () => {
               </div>
               
               <ReportsTable 
-                onViewReport={handleViewReport}
                 onUpdateStatus={handleUpdateReportStatus}
                 onAssignReport={handleAssignReport}
                 currentUser={{ id: 'admin', name: 'Administrador' }}

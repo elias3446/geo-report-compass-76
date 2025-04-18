@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import AppLayout from "@/components/layout/AppLayout";
@@ -18,6 +17,7 @@ import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import SingleReportMap from "@/components/map/ui/SingleReportMap";
 import type { Report, Activity } from "@/services/reportService";
+import { getUserById } from "@/services/userService";
 
 const ReportDetail = () => {
   const { id } = useParams();
@@ -111,6 +111,12 @@ const ReportDetail = () => {
       default:
         return "border-gray-500";
     }
+  };
+
+  const getAssignedUserName = (userId: string | undefined): string => {
+    if (!userId) return "No asignado";
+    const user = getUserById(userId);
+    return user ? user.name : "Usuario no encontrado";
   };
 
   if (loading) {
@@ -214,7 +220,9 @@ const ReportDetail = () => {
                 <User className="h-5 w-5 text-muted-foreground" />
                 <div>
                   <h4 className="font-medium">Assigned To</h4>
-                  <p className="text-sm text-muted-foreground">{report.assignedTo}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {getAssignedUserName(report.assignedTo)}
+                  </p>
                 </div>
               </div>
               
@@ -294,7 +302,6 @@ const ReportDetail = () => {
             </CardContent>
           </Card>
           
-          {/* Add location map for the current report */}
           <Card>
             <CardHeader>
               <CardTitle>Report Location</CardTitle>

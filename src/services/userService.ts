@@ -39,8 +39,8 @@ let users: User[] = [
     email: 'admin@georeport.com',
     role: 'admin',
     active: true,
-    createdAt: new Date().toISOString(),
-    lastLogin: new Date().toISOString(),
+    createdAt: new Date(),
+    lastLogin: new Date(),
   },
   {
     id: '2',
@@ -48,8 +48,8 @@ let users: User[] = [
     email: 'supervisor@georeport.com',
     role: 'supervisor',
     active: true,
-    createdAt: new Date().toISOString(),
-    lastLogin: new Date().toISOString(),
+    createdAt: new Date(),
+    lastLogin: new Date(),
   },
 ];
 
@@ -61,7 +61,7 @@ export const addUser = (user: Omit<User, 'id' | 'createdAt' | 'lastLogin'>): Use
   const newUser = {
     ...user,
     id: Date.now().toString(),
-    createdAt: new Date().toISOString(),
+    createdAt: new Date(),
     lastLogin: null,
   };
   users.push(newUser);
