@@ -2,7 +2,9 @@
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
-import { getReports, Report } from '@/services/reportService';
+import { getReports, updateReport } from '@/services/reportService';
+import { getUserById } from '@/services/userService';
+import { getUsers } from '@/services/adminService';
 import { 
   Table, 
   TableHeader, 
@@ -22,8 +24,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { registerAdminActivity } from '@/services/activityService';
-import { getUsers } from '@/services/userService';
 import { User } from '@/types/admin';
+import { toast } from 'sonner';
 
 interface ReportsTableProps {
   onUpdateStatus: (reportId: string, status: string) => void;
@@ -57,12 +59,11 @@ const ReportsTable: React.FC<ReportsTableProps> = ({
   currentUser = { id: 'admin', name: 'Administrador' }
 }) => {
   const navigate = useNavigate();
-  const reports = getReports();
+  const [reports, setReports] = useState(getReports());
   const [users, setUsers] = useState<User[]>([]);
 
-  // Cargar usuarios al montar el componente
   useEffect(() => {
-    // Obtener usuarios activos
+    // Cargar usuarios desde adminService.ts
     const activeUsers = getUsers().filter(user => user.active);
     setUsers(activeUsers);
     console.log('Usuarios activos cargados:', activeUsers);
@@ -86,27 +87,58 @@ const ReportsTable: React.FC<ReportsTableProps> = ({
       relatedReportId: reportId.toString()
     });
     
+    // Update the local state of reports
+    const updatedReport = updateReport(reportId, { status: newStatus });
+    if (updatedReport) {
+      setReports(prevReports => 
+        prevReports.map(r => r.id === reportId ? { ...r, status: newStatus } : r)
+      );
+    }
+    
     onUpdateStatus(reportId.toString(), newStatus);
   };
 
-  const handleAssignReport = (reportId: number, userId: string) => {
+  const handleAssignReport = async (reportId: number, userId: string) => {
     const report = reports.find(r => r.id === reportId);
     if (!report) return;
 
     const assignedUser = users.find(u => u.id === userId);
     const userName = assignedUser ? assignedUser.name : 'No asignado';
     
-    registerAdminActivity({
-      type: 'report_assigned',
-      title: 'Reporte asignado',
-      description: `Se ha asignado el reporte "${report.title}" a ${userName}`,
-      userId: currentUser.id,
-      userName: currentUser.name,
-      relatedItemId: reportId.toString(),
-      relatedReportId: reportId.toString()
-    });
+    // Update the report in the service
+    const updatedReport = updateReport(reportId, { assignedTo: userId });
     
-    onAssignReport(reportId.toString(), userId);
+    if (updatedReport) {
+      // Update the local state for immediate UI update
+      setReports(prevReports => 
+        prevReports.map(r => r.id === reportId ? { ...r, assignedTo: userId } : r)
+      );
+
+      // Record the activity
+      registerAdminActivity({
+        type: 'report_assigned',
+        title: 'Reporte asignado',
+        description: `Se ha asignado el reporte "${report.title}" a ${userName}`,
+        userId: currentUser.id,
+        userName: currentUser.name,
+        relatedItemId: reportId.toString(),
+        relatedReportId: reportId.toString()
+      });
+      
+      // Show a success message
+      toast.success(`Reporte asignado a ${userName}`);
+      
+      // Notify parent component about the assignment
+      onAssignReport(reportId.toString(), userId);
+    }
+  };
+
+  const getAssignedUserName = (userId: string | undefined): string => {
+    if (!userId || userId === "unassigned") return "Sin asignar";
+    
+    // Buscar el usuario en la lista de usuarios cargada de adminService
+    const user = users.find(u => u.id === userId);
+    return user ? user.name : "Usuario no encontrado";
   };
 
   if (!reports.length) {
@@ -163,11 +195,13 @@ const ReportsTable: React.FC<ReportsTableProps> = ({
                 <TableCell>{report.location}</TableCell>
                 <TableCell>
                   <Select
-                    defaultValue={report.assignedTo || "unassigned"}
+                    value={report.assignedTo || "unassigned"}
                     onValueChange={(value) => handleAssignReport(report.id, value)}
                   >
                     <SelectTrigger className="w-[140px]">
-                      <SelectValue placeholder="Sin asignar" />
+                      <SelectValue>
+                        {getAssignedUserName(report.assignedTo)}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="unassigned">Sin asignar</SelectItem>
