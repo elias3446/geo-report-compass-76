@@ -3,56 +3,108 @@ import { User, Category, SystemSetting, Report, ReportStatus } from '../types/ad
 export const mockUsers: User[] = [
   {
     id: '1',
-    name: 'Admin Usuario',
-    email: 'admin@example.com',
+    name: 'Admin Principal',
+    email: 'admin.principal@example.com',
     role: 'admin',
     active: true,
     createdAt: new Date('2024-01-01'),
     lastLogin: new Date('2024-03-15'),
-    avatar: '/avatars/admin.jpg'
+    avatar: '/avatars/admin-1.jpg'
   },
   {
     id: '2',
-    name: 'Supervisor Web',
-    email: 'supervisor@example.com',
-    role: 'supervisor',
+    name: 'Admin Secundario',
+    email: 'admin.secundario@example.com',
+    role: 'admin',
     active: true,
     createdAt: new Date('2024-01-15'),
     lastLogin: new Date('2024-03-20'),
-    avatar: '/avatars/supervisor.jpg'
+    avatar: '/avatars/admin-2.jpg'
   },
   {
     id: '3',
-    name: 'Usuario Móvil Ciudadano',
-    email: 'mobile.citizen@example.com',
-    role: 'mobile',
+    name: 'Supervisor Web 1',
+    email: 'supervisor1@example.com',
+    role: 'supervisor',
     active: true,
     createdAt: new Date('2024-02-01'),
     lastLogin: new Date('2024-03-25'),
-    mobileUserType: 'citizen',
-    avatar: '/avatars/mobile-citizen.jpg'
+    avatar: '/avatars/supervisor-1.jpg'
   },
   {
     id: '4',
-    name: 'Usuario Móvil Técnico',
-    email: 'mobile.technician@example.com',
-    role: 'mobile',
+    name: 'Supervisor Web 2',
+    email: 'supervisor2@example.com',
+    role: 'supervisor',
     active: false,
     createdAt: new Date('2024-02-15'),
-    lastLogin: new Date('2024-03-30'),
-    mobileUserType: 'technician',
-    avatar: '/avatars/mobile-technician.jpg'
+    lastLogin: null,
+    avatar: '/avatars/supervisor-2.jpg'
   },
   {
     id: '5',
-    name: 'Visualizador de Reportes',
-    email: 'viewer@example.com',
-    role: 'viewer',
+    name: 'Técnico Móvil 1',
+    email: 'tecnico1@example.com',
+    role: 'mobile',
     active: true,
     createdAt: new Date('2024-03-01'),
-    lastLogin: null,
-    avatar: '/avatars/viewer.jpg'
+    lastLogin: new Date('2024-03-30'),
+    mobileUserType: 'technician',
+    avatar: '/avatars/mobile-tech-1.jpg'
   },
+  {
+    id: '6',
+    name: 'Técnico Móvil 2',
+    email: 'tecnico2@example.com',
+    role: 'mobile',
+    active: true,
+    createdAt: new Date('2024-03-05'),
+    lastLogin: new Date('2024-04-01'),
+    mobileUserType: 'technician',
+    avatar: '/avatars/mobile-tech-2.jpg'
+  },
+  {
+    id: '7',
+    name: 'Ciudadano 1',
+    email: 'ciudadano1@example.com',
+    role: 'mobile',
+    active: true,
+    createdAt: new Date('2024-03-10'),
+    lastLogin: new Date('2024-04-05'),
+    mobileUserType: 'citizen',
+    avatar: '/avatars/mobile-citizen-1.jpg'
+  },
+  {
+    id: '8',
+    name: 'Ciudadano 2',
+    email: 'ciudadano2@example.com',
+    role: 'mobile',
+    active: false,
+    createdAt: new Date('2024-03-15'),
+    lastLogin: null,
+    mobileUserType: 'citizen',
+    avatar: '/avatars/mobile-citizen-2.jpg'
+  },
+  {
+    id: '9',
+    name: 'Visualizador 1',
+    email: 'viewer1@example.com',
+    role: 'viewer',
+    active: true,
+    createdAt: new Date('2024-03-20'),
+    lastLogin: new Date('2024-04-10'),
+    avatar: '/avatars/viewer-1.jpg'
+  },
+  {
+    id: '10',
+    name: 'Visualizador 2',
+    email: 'viewer2@example.com',
+    role: 'viewer',
+    active: false,
+    createdAt: new Date('2024-03-25'),
+    lastLogin: null,
+    avatar: '/avatars/viewer-2.jpg'
+  }
 ];
 
 export const mockCategories: Category[] = [

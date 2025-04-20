@@ -17,7 +17,7 @@ import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import SingleReportMap from "@/components/map/ui/SingleReportMap";
 import type { Report, Activity } from "@/services/reportService";
-import { getUserById } from "@/services/userService";
+import { getUserById } from "@/services/adminService";
 
 const ReportDetail = () => {
   const { id } = useParams();
@@ -116,7 +116,7 @@ const ReportDetail = () => {
   const getAssignedUserName = (userId: string | undefined): string => {
     if (!userId) return "No asignado";
     const user = getUserById(userId);
-    return user ? user.name : "Usuario no encontrado";
+    return user ? user.name : "No asignado";
   };
 
   if (loading) {

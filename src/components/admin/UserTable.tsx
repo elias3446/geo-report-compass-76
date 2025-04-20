@@ -2,6 +2,7 @@
 import React from 'react';
 import { format } from 'date-fns';
 import { User } from '../../types/admin';
+import { useUsers } from '@/contexts/UserContext';
 import { 
   Table, 
   TableHeader, 
@@ -26,10 +27,9 @@ import {
 import { registerAdminActivity } from '@/services/activityService';
 
 interface UserTableProps {
-  users: User[];
   onEdit: (user: User) => void;
-  onDelete: (userId: string) => void;
-  currentUser?: { id: string; name: string }; // Usuario actual para el registro de actividad
+  currentUser?: { id: string; name: string };
+  filteredUsers: User[];
 }
 
 const roleColors = {
@@ -40,13 +40,13 @@ const roleColors = {
 };
 
 const UserTable: React.FC<UserTableProps> = ({ 
-  users, 
-  onEdit, 
-  onDelete,
-  currentUser = { id: 'admin', name: 'Administrador' } // Valor por defecto
+  onEdit,
+  currentUser = { id: 'admin', name: 'Administrador' },
+  filteredUsers
 }) => {
+  const { deleteUser } = useUsers();
+
   const handleDelete = (user: User) => {
-    // Registrar la actividad antes de eliminar
     registerAdminActivity({
       type: 'user_deleted',
       title: 'Usuario eliminado',
@@ -56,11 +56,10 @@ const UserTable: React.FC<UserTableProps> = ({
       relatedItemId: user.id
     });
     
-    // Llamar a la función original de eliminación
-    onDelete(user.id);
+    deleteUser(user.id);
   };
 
-  if (!users.length) {
+  if (!filteredUsers.length) {
     return (
       <div className="text-center py-10 text-gray-500">
         No se encontraron usuarios.
@@ -83,7 +82,7 @@ const UserTable: React.FC<UserTableProps> = ({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {users.map((user) => (
+          {filteredUsers.map((user) => (
             <TableRow key={user.id}>
               <TableCell>
                 <Avatar className="h-8 w-8">

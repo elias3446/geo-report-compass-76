@@ -460,9 +460,14 @@ export const updateReport = (id: number, updates: Partial<Report>): Report | nul
 
 // Delete a report
 export const deleteReport = (id: number): boolean => {
-  const initialLength = reportsData.length;
-  reportsData = reportsData.filter(r => r.id !== id);
-  return reportsData.length !== initialLength;
+  try {
+    const initialLength = reportsData.length;
+    reportsData = reportsData.filter(r => r.id !== id);
+    return reportsData.length !== initialLength;
+  } catch (error) {
+    console.error("Error deleting report:", error);
+    throw new Error("No se pudo eliminar el reporte");
+  }
 };
 
 // Get reports by status

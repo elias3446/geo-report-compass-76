@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/layout/AppLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,17 +15,23 @@ import SettingsForm from '@/components/admin/SettingsForm';
 import ReportsTable from '@/components/admin/ReportsTable';
 import { User, Category, SystemSetting, Report, UserRole } from '@/types/admin';
 import { 
-  getUsers, getUsersByRole, searchUsers, getUsersStats, createUser, updateUser,
+  getUsers, createUser, updateUser,
   getCategories, createCategory, updateCategory,
   getSettings, updateSetting
 } from '@/services/adminService';
 import { getReports } from '@/services/reportService';
+import { useUsers } from '@/contexts/UserContext';
 
 const Admin = () => {
   // State for users tab
   const [searchQuery, setSearchQuery] = useState('');
   const [activeUserFilter, setActiveUserFilter] = useState<string>('all');
-  const [users, setUsers] = useState<User[]>([]);
+  const { 
+    users, setUsers, deleteUser, 
+    totalUsers, adminUsers, supervisorUsers, mobileUsers, 
+    getFilteredUsers 
+  } = useUsers();
+  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [userFormOpen, setUserFormOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | undefined>(undefined);
   
@@ -36,15 +43,6 @@ const Admin = () => {
   // State for settings tab
   const [settings, setSettings] = useState<SystemSetting[]>([]);
   
-  // Stats
-  const [userStats, setUserStats] = useState({
-    total: 0,
-    active: 0,
-    admins: 0,
-    supervisors: 0,
-    mobile: 0
-  });
-
   // Reports
   const [reports, setReports] = useState<any[]>([]);
   const [reportCounts, setReportCounts] = useState({
@@ -54,47 +52,55 @@ const Admin = () => {
     resolved: 0
   });
 
+  // Cargar datos iniciales y actualizar contadores
+  const loadReportsData = () => {
+    const allReports = getReports();
+    setReports(allReports);
+    
+    // Calcular contadores basados en los datos actuales
+    updateReportCounts(allReports);
+  };
+
+  // Función para actualizar los contadores de reportes
+  const updateReportCounts = (reportsList: any[]) => {
+    setReportCounts({
+      total: reportsList.length,
+      pending: reportsList.filter(r => r.status === 'Open' || r.status === 'draft').length,
+      inProgress: reportsList.filter(r => r.status === 'In Progress' || r.status === 'submitted').length,
+      resolved: reportsList.filter(r => r.status === 'Resolved' || r.status === 'approved').length
+    });
+  };
+
   // Load initial data
   useEffect(() => {
-    const allUsers = getUsers();
-    const allReports = getReports();
+    const allUsers = getFilteredUsers('all');
+    setFilteredUsers(allUsers);
     
-    setUsers(allUsers);
-    setReports(allReports);
-    setUserStats(getUsersStats());
+    loadReportsData();
     setCategories(getCategories());
     setSettings(getSettings());
-    
-    // Calculate report counts based on actual data
-    setReportCounts({
-      total: allReports.length,
-      pending: allReports.filter(r => r.status === 'Open' || r.status === 'draft').length,
-      inProgress: allReports.filter(r => r.status === 'In Progress' || r.status === 'submitted').length,
-      resolved: allReports.filter(r => r.status === 'Resolved' || r.status === 'approved').length
-    });
-  }, []);
+  }, [getFilteredUsers]);
 
   // Filter users based on search and role filter
   useEffect(() => {
-    let filteredUsers = [];
+    let filtered = getFilteredUsers(activeUserFilter);
     
     if (searchQuery) {
-      filteredUsers = searchUsers(searchQuery);
-    } else if (activeUserFilter === 'all') {
-      filteredUsers = getUsers();
-    } else {
-      filteredUsers = getUsersByRole(activeUserFilter as UserRole);
+      filtered = filtered.filter(
+        user => 
+          user.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+          user.email.toLowerCase().includes(searchQuery.toLowerCase())
+      );
     }
     
-    setUsers(filteredUsers);
-  }, [searchQuery, activeUserFilter]);
+    setFilteredUsers(filtered);
+  }, [searchQuery, activeUserFilter, getFilteredUsers, users]);
 
   // User management handlers
   const handleCreateUser = (userData: Omit<User, 'id' | 'createdAt' | 'lastLogin'>) => {
     try {
       const newUser = createUser(userData);
       setUsers(prevUsers => [...prevUsers, newUser]);
-      setUserStats(getUsersStats());
       toast({
         title: "Usuario creado",
         description: `El usuario ${newUser.name} ha sido creado correctamente.`,
@@ -116,7 +122,6 @@ const Admin = () => {
         setUsers(prevUsers => prevUsers.map(user => 
           user.id === updatedUser.id ? updatedUser : user
         ));
-        setUserStats(getUsersStats());
         toast({
           title: "Usuario actualizado",
           description: `El usuario ${updatedUser.name} ha sido actualizado correctamente.`,
@@ -145,12 +150,7 @@ const Admin = () => {
   };
 
   const handleDeleteUser = (userId: string) => {
-    setUsers(prevUsers => prevUsers.filter(user => user.id !== userId));
-    setUserStats(getUsersStats());
-    toast({
-      title: "Usuario eliminado",
-      description: "El usuario ha sido eliminado correctamente.",
-    });
+    deleteUser(userId);
   };
 
   // Category management handlers
@@ -237,44 +237,70 @@ const Admin = () => {
 
   // Report handlers
   const handleUpdateReportStatus = (reportId: string, status: string) => {
-    // Update the local state for immediate UI feedback
-    const updatedReports = reports.map(report => {
-      if (report.id.toString() === reportId) {
-        return { ...report, status };
-      }
-      return report;
-    });
-    
-    setReports(updatedReports);
-    
-    // Recalculate counts
-    setReportCounts({
-      total: updatedReports.length,
-      pending: updatedReports.filter(r => r.status === 'Open' || r.status === 'draft').length,
-      inProgress: updatedReports.filter(r => r.status === 'In Progress' || r.status === 'submitted').length,
-      resolved: updatedReports.filter(r => r.status === 'Resolved' || r.status === 'approved').length
-    });
-    
-    toast({
-      title: "Estado actualizado",
-      description: `El estado del reporte ha sido actualizado correctamente.`,
-    });
+    try {
+      // Update the local state for immediate UI feedback
+      const updatedReports = reports.map(report => {
+        if (report.id.toString() === reportId) {
+          return { ...report, status };
+        }
+        return report;
+      });
+      
+      setReports(updatedReports);
+      updateReportCounts(updatedReports);
+      
+      toast({
+        title: "Estado actualizado",
+        description: `El estado del reporte ha sido actualizado correctamente.`,
+      });
+    } catch (error) {
+      console.error('Error al actualizar el estado del reporte:', error);
+      toast({
+        title: "Error",
+        description: "Ocurrió un error al actualizar el estado del reporte",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleAssignReport = (reportId: string, userId: string) => {
-    // Update the local state for immediate UI feedback
-    const updatedReports = reports.map(report => {
-      if (report.id.toString() === reportId) {
-        return { ...report, assignedTo: userId };
-      }
-      return report;
-    });
-    
+    try {
+      // Update the local state for immediate UI feedback
+      const updatedReports = reports.map(report => {
+        if (report.id.toString() === reportId) {
+          return { ...report, assignedTo: userId };
+        }
+        return report;
+      });
+      
+      setReports(updatedReports);
+      
+      toast({
+        title: "Reporte asignado",
+        description: `El reporte ha sido asignado correctamente.`,
+      });
+    } catch (error) {
+      console.error('Error al asignar el reporte:', error);
+      toast({
+        title: "Error",
+        description: "Ocurrió un error al asignar el reporte",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Manejar la eliminación de un reporte
+  const handleReportDeleted = (reportId: number) => {
+    // Filtrar el reporte eliminado de la lista local
+    const updatedReports = reports.filter(report => report.id !== reportId);
     setReports(updatedReports);
     
-    toast({
-      title: "Reporte asignado",
-      description: `El reporte ha sido asignado correctamente.`,
+    // Actualizar los contadores
+    updateReportCounts(updatedReports);
+
+    console.log("Reporte eliminado y contadores actualizados:", {
+      reportId,
+      newTotalReports: updatedReports.length
     });
   };
 
@@ -331,7 +357,7 @@ const Admin = () => {
                 onClick={() => setActiveUserFilter('all')}
               >
                 <Users className="mr-2 h-4 w-4" />
-                Todos ({userStats.total})
+                Todos ({totalUsers})
               </Button>
               <Button 
                 variant={activeUserFilter === 'admin' ? 'default' : 'outline'} 
@@ -339,7 +365,7 @@ const Admin = () => {
                 onClick={() => setActiveUserFilter('admin')}
               >
                 <Shield className="mr-2 h-4 w-4" />
-                Administradores ({userStats.admins})
+                Administradores ({adminUsers})
               </Button>
               <Button 
                 variant={activeUserFilter === 'supervisor' ? 'default' : 'outline'} 
@@ -347,7 +373,7 @@ const Admin = () => {
                 onClick={() => setActiveUserFilter('supervisor')}
               >
                 <UserCog className="mr-2 h-4 w-4" />
-                Supervisores ({userStats.supervisors})
+                Supervisores ({supervisorUsers})
               </Button>
               <Button 
                 variant={activeUserFilter === 'mobile' ? 'default' : 'outline'} 
@@ -355,14 +381,13 @@ const Admin = () => {
                 onClick={() => setActiveUserFilter('mobile')}
               >
                 <Smartphone className="mr-2 h-4 w-4" />
-                Usuarios Móviles ({userStats.mobile})
+                Usuarios Móviles ({mobileUsers})
               </Button>
             </div>
             
             <UserTable 
-              users={users}
               onEdit={handleEditUser}
-              onDelete={handleDeleteUser}
+              filteredUsers={filteredUsers}
             />
 
             {userFormOpen && (
@@ -424,6 +449,7 @@ const Admin = () => {
               <ReportsTable 
                 onUpdateStatus={handleUpdateReportStatus}
                 onAssignReport={handleAssignReport}
+                onReportDeleted={handleReportDeleted}
                 currentUser={{ id: 'admin', name: 'Administrador' }}
               />
             </CardContent>
