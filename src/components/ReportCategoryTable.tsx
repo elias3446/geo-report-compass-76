@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Table,
   TableBody,
@@ -10,8 +10,20 @@ import {
 } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
-import { EditIcon, TrashIcon } from "lucide-react";
+import { EditIcon, Trash } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { getReportsByCategoryId } from '@/services/adminService';
 
 interface Category {
   id: string;
@@ -32,6 +44,19 @@ const ReportCategoryTable: React.FC<ReportCategoryTableProps> = ({
   onEdit,
   onDelete,
 }) => {
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  
+  // Verificar si una categoría tiene reportes asociados
+  const checkCategoryHasReports = (categoryId: string): boolean => {
+    const reports = getReportsByCategoryId(categoryId);
+    return reports.length > 0;
+  };
+
+  const handleDelete = (categoryId: string) => {
+    setSelectedCategoryId(null);
+    onDelete(categoryId);
+  };
+
   return (
     <div className="border rounded-lg">
       <ScrollArea className="h-[500px]">
@@ -67,14 +92,40 @@ const ReportCategoryTable: React.FC<ReportCategoryTableProps> = ({
                     >
                       <EditIcon className="h-4 w-4" />
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-destructive"
-                      onClick={() => onDelete(category.id)}
-                    >
-                      <TrashIcon className="h-4 w-4" />
-                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-destructive"
+                        >
+                          <Trash className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            {checkCategoryHasReports(category.id) 
+                              ? "No se puede eliminar esta categoría porque tiene reportes asociados." 
+                              : "Esta acción eliminará permanentemente la categoría y no se puede deshacer."}
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel onClick={() => setSelectedCategoryId(null)}>
+                            Cancelar
+                          </AlertDialogCancel>
+                          {!checkCategoryHasReports(category.id) && (
+                            <AlertDialogAction 
+                              onClick={() => handleDelete(category.id)}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              Eliminar
+                            </AlertDialogAction>
+                          )}
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
                 </TableCell>
               </TableRow>

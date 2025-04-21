@@ -9,7 +9,8 @@ import {
   Search,
   Menu,
   X,
-  Bell
+  Bell,
+  Users
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -28,6 +29,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -36,10 +38,12 @@ interface LayoutProps {
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const location = useLocation();
   const isMobile = useIsMobile();
+  const { user, role } = useAuth();
   
   const navItems = [
     { path: '/', label: 'Dashboard', icon: <LayoutDashboard className="h-5 w-5" /> },
     { path: '/reports', label: 'Reports', icon: <FileText className="h-5 w-5" /> },
+    ...(role === 'admin' ? [{ path: '/admin', label: 'Admin', icon: <Users className="h-5 w-5" /> }] : []),
     { path: '/settings', label: 'Settings', icon: <Settings className="h-5 w-5" /> },
   ];
   

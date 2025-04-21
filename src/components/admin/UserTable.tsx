@@ -25,6 +25,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { registerAdminActivity } from '@/services/activityService';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface UserTableProps {
   onEdit: (user: User) => void;
@@ -68,7 +69,7 @@ const UserTable: React.FC<UserTableProps> = ({
   }
 
   return (
-    <div className="rounded-md border">
+    <ScrollArea className="h-[600px] rounded-md border">
       <Table>
         <TableHeader>
           <TableRow>
@@ -147,7 +148,7 @@ const UserTable: React.FC<UserTableProps> = ({
           ))}
         </TableBody>
       </Table>
-    </div>
+    </ScrollArea>
   );
 };
 

@@ -78,6 +78,27 @@ export const updateCategory = (id: string, categoryData: Partial<Category>): Cat
   return mockCategories[index];
 };
 
+export const deleteCategory = (id: string): boolean => {
+  const index = mockCategories.findIndex(category => category.id === id);
+  if (index === -1) return false;
+  
+  // Verificar si la categoría está siendo utilizada en reportes
+  const reportsWithCategory = mockReports.filter(report => report.category === id);
+  if (reportsWithCategory.length > 0) {
+    console.warn(`No se puede eliminar la categoría con ID ${id} porque está siendo utilizada en ${reportsWithCategory.length} reportes.`);
+    return false;
+  }
+  
+  // Eliminar la categoría
+  mockCategories.splice(index, 1);
+  return true;
+};
+
+// Añadimos la función para obtener reportes por categoría
+export const getReportsByCategoryId = (categoryId: string): Report[] => {
+  return mockReports.filter(report => report.category === categoryId);
+};
+
 // Settings management functions
 export const getSettings = (): SystemSetting[] => {
   return [...mockSettings];
@@ -141,9 +162,4 @@ export const getReportsStats = () => {
     resolved: mockReports.filter(r => r.status === 'resolved').length,
     highPriority: mockReports.filter(r => r.priority === 'high').length
   };
-};
-
-// Añadimos la función para obtener reportes por categoría
-export const getReportsByCategoryId = (categoryId: string): Report[] => {
-  return mockReports.filter(report => report.category === categoryId);
 };

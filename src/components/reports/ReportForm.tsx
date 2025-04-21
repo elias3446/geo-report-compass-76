@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
@@ -25,6 +24,8 @@ import { Map, Loader2, ImagePlus } from "lucide-react";
 import MapView from "@/components/map/MapView";
 import { addReport, updateReport } from "@/services/reportService";
 import EditableLocationMap from '@/components/map/ui/EditableLocationMap';
+import { getCategories } from '@/services/adminService';
+import { Category } from '@/types/admin';
 
 interface FormData {
   title: string;
@@ -45,6 +46,7 @@ const ReportForm = ({ onSubmit, isEditing = false, initialData }: ReportFormProp
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showMap, setShowMap] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [formData, setFormData] = useState<FormData>({
     title: "",
     description: "",
@@ -56,17 +58,10 @@ const ReportForm = ({ onSubmit, isEditing = false, initialData }: ReportFormProp
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
 
   useEffect(() => {
-    if (isEditing && initialData) {
-      setFormData({
-        title: initialData.title || "",
-        description: initialData.description || "",
-        category: initialData.category?.toLowerCase() || "",
-        priority: initialData.priority?.toLowerCase() || "",
-        location: initialData.location || "",
-        images: []
-      });
-    }
-  }, [isEditing, initialData]);
+    // Load categories from mockData
+    const mockCategories = getCategories();
+    setCategories(mockCategories);
+  }, []);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -209,6 +204,7 @@ const ReportForm = ({ onSubmit, isEditing = false, initialData }: ReportFormProp
             {isEditing ? "Update an existing report" : "Submit a new issue or incident report"}
           </CardDescription>
         </CardHeader>
+        
         <CardContent className="space-y-6">
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -223,27 +219,30 @@ const ReportForm = ({ onSubmit, isEditing = false, initialData }: ReportFormProp
                   required
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="category">Category *</Label>
-                <Select
-                  value={formData.category}
-                  onValueChange={(value) => handleSelectChange("category", value)}
-                  required
-                >
-                  <SelectTrigger id="category">
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="infrastructure">Infrastructure</SelectItem>
-                    <SelectItem value="road">Road Maintenance</SelectItem>
-                    <SelectItem value="public_service">Public Service</SelectItem>
-                    <SelectItem value="environment">Environment</SelectItem>
-                    <SelectItem value="safety">Safety & Security</SelectItem>
-                    <SelectItem value="vandalism">Vandalism</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="category">Category *</Label>
+              <Select
+                value={formData.category}
+                onValueChange={(value) => handleSelectChange("category", value)}
+                required
+              >
+                <SelectTrigger id="category">
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((category) => (
+                    <SelectItem 
+                      key={category.id} 
+                      value={category.id}
+                    >
+                      {category.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -376,6 +375,7 @@ const ReportForm = ({ onSubmit, isEditing = false, initialData }: ReportFormProp
             </div>
           </div>
         </CardContent>
+        
         <CardFooter className="flex justify-between">
           <Button 
             type="button" 
