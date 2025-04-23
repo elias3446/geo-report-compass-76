@@ -4,7 +4,16 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Edit, Trash2 } from "lucide-react";
+import { Edit, Trash2, Plus } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
 
 const initialStatuses = [
   { id: "draft", name: "Borrador", description: "Guardado, NO enviado" },
@@ -15,11 +24,32 @@ const initialStatuses = [
 
 const AdminStatuses = () => {
   const [statuses, setStatuses] = useState(initialStatuses);
+  const [isOpen, setIsOpen] = useState(false);
+  const [formData, setFormData] = useState({ name: "", description: "" });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setStatuses(prev => [
+      ...prev,
+      {
+        id: `status_${Date.now()}`,
+        name: formData.name,
+        description: formData.description
+      }
+    ]);
+    toast.success("Estado creado correctamente");
+    setFormData({ name: "", description: "" });
+    setIsOpen(false);
+  };
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex items-center justify-between">
         <CardTitle>Estados de Reporte</CardTitle>
+        <Button variant="default" onClick={() => setIsOpen(true)} size="sm">
+          <Plus className="w-4 h-4 mr-1" />
+          Nuevo Estado
+        </Button>
       </CardHeader>
       <CardContent>
         <div className="overflow-auto max-h-[500px]">
@@ -54,6 +84,33 @@ const AdminStatuses = () => {
           </Table>
         </div>
       </CardContent>
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Nuevo Estado</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <Input
+              required
+              placeholder="Nombre del estado"
+              value={formData.name}
+              onChange={e => setFormData({ ...formData, name: e.target.value })}
+            />
+            <Input
+              required
+              placeholder="Descripción"
+              value={formData.description}
+              onChange={e => setFormData({ ...formData, description: e.target.value })}
+            />
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit">Crear Estado</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 };

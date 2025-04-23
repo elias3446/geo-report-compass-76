@@ -1,35 +1,44 @@
 
-import React from "react";
+import React, { useState } from "react";
 import ReportCategoryTable from "@/components/ReportCategoryTable";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
+import CategoryForm from "@/components/admin/CategoryForm";
+import { createCategory, getCategories } from "@/services/adminService";
+import { Category } from "@/types/admin";
 
-type Category = {
-  id: string;
-  name: string;
-  description: string;
-  reports: number;
-  status: "active" | "inactive";
+// Para persistencia simple en runtime
+const initialCategories: Category[] = getCategories();
+
+const AdminCategories = () => {
+  const [categories, setCategories] = useState<Category[]>(initialCategories);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+
+  const handleCreateCategory = (data: Omit<Category, "id" | "createdAt">) => {
+    const nueva = createCategory(data);
+    setCategories(prev => [...prev, nueva]);
+  };
+
+  return (
+    <Card>
+      <CardHeader className="flex items-center justify-between">
+        <CardTitle>Categorías de Reportes</CardTitle>
+        <Button variant="default" onClick={() => setIsFormOpen(true)} size="sm">
+          <Plus className="w-4 h-4 mr-1" />
+          Nueva Categoría
+        </Button>
+      </CardHeader>
+      <CardContent>
+        <ReportCategoryTable
+          categories={categories}
+          onEdit={() => {}}
+          onDelete={() => {}}
+        />
+      </CardContent>
+      <CategoryForm open={isFormOpen} onClose={() => setIsFormOpen(false)} onSubmit={handleCreateCategory} />
+    </Card>
+  );
 };
-
-const categories: Category[] = [
-  { id: "1", name: "Ambiental", description: "Reportes del medio ambiente", reports: 6, status: "active" },
-  { id: "2", name: "Infraestructura", description: "Daños y mejoras", reports: 3, status: "inactive" },
-  // ... puedes cargar esto dinamicamente ...
-];
-
-const AdminCategories = () => (
-  <Card>
-    <CardHeader>
-      <CardTitle>Categorías de Reportes</CardTitle>
-    </CardHeader>
-    <CardContent>
-      <ReportCategoryTable
-        categories={categories}
-        onEdit={() => {}}
-        onDelete={() => {}}
-      />
-    </CardContent>
-  </Card>
-);
 
 export default AdminCategories;
