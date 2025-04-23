@@ -28,9 +28,11 @@ const AdminUsers = () => {
         </Button>
       </CardHeader>
       <CardContent>
-        <ScrollArea className="max-h-[600px]">
-          <UserTable filteredUsers={users} onEdit={() => {}} />
-        </ScrollArea>
+        <div className="border rounded-md">
+          <ScrollArea className="h-[600px]">
+            <UserTable filteredUsers={users} onEdit={() => {}} />
+          </ScrollArea>
+        </div>
       </CardContent>
       <UserForm open={isFormOpen} onClose={() => setIsFormOpen(false)} onSubmit={handleCreateUser} />
     </Card>
