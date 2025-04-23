@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -21,9 +20,6 @@ import NotFound from "./pages/NotFound";
 import Dashboard from "./pages/Dashboard";
 import UserDetail from "./pages/UserDetail";
 import CategoryDetail from "./pages/CategoryDetail";
-import LoginPage from "./pages/LoginPage";
-import PrivateRoute from "./components/PrivateRoute";
-import { AuthProvider } from "./contexts/AuthContext";
 
 const App = () => {
   const [queryClient] = useState(() => new QueryClient());
@@ -34,114 +30,27 @@ const App = () => {
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <AuthProvider>
-            <UserProvider>
-              <ReportProvider>
-                <TimeFilterProvider>
-                  <Routes>
-                    <Route path="/login" element={<LoginPage />} />
-                    <Route path="*" element={<NotFound />} />
-                    <Route
-                      path="/"
-                      element={
-                        <PrivateRoute>
-                          <Index />
-                        </PrivateRoute>
-                      }
-                    />
-                    <Route
-                      path="/reports"
-                      element={
-                        <PrivateRoute>
-                          <Reports />
-                        </PrivateRoute>
-                      }
-                    />
-                    <Route
-                      path="/reports/:id"
-                      element={
-                        <PrivateRoute>
-                          <ReportDetail />
-                        </PrivateRoute>
-                      }
-                    />
-                    <Route
-                      path="/reports/:id/edit"
-                      element={
-                        <PrivateRoute>
-                          <EditReport />
-                        </PrivateRoute>
-                      }
-                    />
-                    <Route
-                      path="/new-report"
-                      element={
-                        <PrivateRoute>
-                          <NewReport />
-                        </PrivateRoute>
-                      }
-                    />
-                    <Route
-                      path="/map"
-                      element={
-                        <PrivateRoute>
-                          <MapPage />
-                        </PrivateRoute>
-                      }
-                    />
-                    <Route
-                      path="/admin"
-                      element={
-                        <PrivateRoute>
-                          <Admin />
-                        </PrivateRoute>
-                      }
-                    />
-                    <Route
-                      path="/help"
-                      element={
-                        <PrivateRoute>
-                          <Help />
-                        </PrivateRoute>
-                      }
-                    />
-                    <Route
-                      path="/settings"
-                      element={
-                        <PrivateRoute>
-                          <SettingsPage />
-                        </PrivateRoute>
-                      }
-                    />
-                    <Route
-                      path="/dashboard"
-                      element={
-                        <PrivateRoute>
-                          <Dashboard />
-                        </PrivateRoute>
-                      }
-                    />
-                    <Route
-                      path="/users/:id"
-                      element={
-                        <PrivateRoute>
-                          <UserDetail />
-                        </PrivateRoute>
-                      }
-                    />
-                    <Route
-                      path="/categories/:id"
-                      element={
-                        <PrivateRoute>
-                          <CategoryDetail />
-                        </PrivateRoute>
-                      }
-                    />
-                  </Routes>
-                </TimeFilterProvider>
-              </ReportProvider>
-            </UserProvider>
-          </AuthProvider>
+          <UserProvider>
+            <ReportProvider>
+              <TimeFilterProvider>
+                <Routes>
+                  <Route path="/" element={<Index />} />
+                  <Route path="/reports" element={<Reports />} />
+                  <Route path="/reports/:id" element={<ReportDetail />} />
+                  <Route path="/reports/:id/edit" element={<EditReport />} />
+                  <Route path="/new-report" element={<NewReport />} />
+                  <Route path="/map" element={<MapPage />} />
+                  <Route path="/admin" element={<Admin />} />
+                  <Route path="/help" element={<Help />} />
+                  <Route path="/settings" element={<SettingsPage />} />
+                  <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/users/:id" element={<UserDetail />} />
+                  <Route path="/categories/:id" element={<CategoryDetail />} />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </TimeFilterProvider>
+            </ReportProvider>
+          </UserProvider>
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>

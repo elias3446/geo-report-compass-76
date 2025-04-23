@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/layout/AppLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,12 +13,10 @@ import CategoryList from '@/components/admin/CategoryList';
 import CategoryForm from '@/components/admin/CategoryForm';
 import SettingsForm from '@/components/admin/SettingsForm';
 import ReportsTable from '@/components/admin/ReportsTable';
-import RoleManageTable from '@/components/admin/RoleManageTable';
-import StatusManageTable from '@/components/admin/StatusManageTable';
 import { User, Category, SystemSetting, Report, UserRole } from '@/types/admin';
 import { 
   getUsers, createUser, updateUser,
-  getCategories, createCategory, updateCategory, deleteCategory,
+  getCategories, createCategory, updateCategory,
   getSettings, updateSetting
 } from '@/services/adminService';
 import { getReports } from '@/services/reportService';
@@ -85,48 +84,15 @@ const Admin = () => {
   // Filter users based on search and role filter
   useEffect(() => {
     let filtered = getFilteredUsers(activeUserFilter);
-
+    
     if (searchQuery) {
-      const lowerQuery = searchQuery.toLowerCase();
-      filtered = filtered.filter((user) => {
-        // Buscar por nombre, email, rol, estado o fecha de último acceso
-        const nameMatch = user.name.toLowerCase().includes(lowerQuery);
-        const emailMatch = user.email.toLowerCase().includes(lowerQuery);
-        const roleText = 
-          user.role === 'admin' ? 'administrador' :
-          user.role === 'supervisor' ? 'supervisor' :
-          user.role === 'mobile' ? 'usuario móvil' :
-          user.role === 'viewer' ? 'visualizador' : '';
-        const roleMatch = roleText.toLowerCase().includes(lowerQuery);
-        const estadoText = user.active ? 'activo' : 'inactivo';
-        const estadoMatch = estadoText.includes(lowerQuery);
-
-        // Comparar fecha último acceso (formato: dd/mm/yyyy hh:mm, "nunca" o similar)
-        let lastLoginMatch = false;
-        if (user.lastLogin) {
-          const options: Intl.DateTimeFormatOptions = { 
-            day: "2-digit", month: "2-digit",
-            year: "numeric", hour: "2-digit", minute: "2-digit"
-          };
-          const formatted = user.lastLogin
-            .toLocaleString("es-ES", options)
-            .replace(',', '').replace(/\./g, '').toLowerCase();
-          lastLoginMatch = formatted.includes(lowerQuery);
-        } else {
-          // "Nunca" (por si buscan la palabra "nunca")
-          lastLoginMatch = 'nunca'.includes(lowerQuery);
-        }
-
-        return nameMatch || emailMatch || roleMatch || estadoMatch || lastLoginMatch;
-      });
+      filtered = filtered.filter(
+        user => 
+          user.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+          user.email.toLowerCase().includes(searchQuery.toLowerCase())
+      );
     }
-    // Ordenar por fecha de creación descendente (más recientes primero)
-    filtered = [...filtered].sort((a, b) => {
-      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-      return dateB - dateA;
-    });
-
+    
     setFilteredUsers(filtered);
   }, [searchQuery, activeUserFilter, getFilteredUsers, users]);
 
@@ -241,32 +207,11 @@ const Admin = () => {
   };
 
   const handleDeleteCategory = (categoryId: string) => {
-    try {
-      // Importamos la función de eliminación desde el servicio
-      const deleted = deleteCategory(categoryId);
-      
-      if (deleted) {
-        // Actualizar el estado local solo si la eliminación fue exitosa
-        setCategories(prevCategories => prevCategories.filter(category => category.id !== categoryId));
-        toast({
-          title: "Categoría eliminada",
-          description: "La categoría ha sido eliminada correctamente.",
-        });
-      } else {
-        toast({
-          title: "Error al eliminar",
-          description: "No se puede eliminar la categoría porque está siendo utilizada en reportes.",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      console.error("Error al eliminar la categoría:", error);
-      toast({
-        title: "Error al eliminar",
-        description: "Ha ocurrido un error al eliminar la categoría.",
-        variant: "destructive",
-      });
-    }
+    setCategories(prevCategories => prevCategories.filter(category => category.id !== categoryId));
+    toast({
+      title: "Categoría eliminada",
+      description: "La categoría ha sido eliminada correctamente.",
+    });
   };
 
   const handleToggleCategoryActive = (categoryId: string, active: boolean) => {
@@ -369,17 +314,13 @@ const Admin = () => {
       </div>
       
       <Tabs defaultValue="users" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="users">Usuarios</TabsTrigger>
+          <TabsTrigger value="reports">Reportes</TabsTrigger>
+          <TabsTrigger value="categories">Categorías</TabsTrigger>
+          <TabsTrigger value="settings">Configuración</TabsTrigger>
+        </TabsList>
         
-      <TabsList>
-        <TabsTrigger value="users">Usuarios</TabsTrigger>
-        <TabsTrigger value="reports">Reportes</TabsTrigger>
-        <TabsTrigger value="categories">Categorías</TabsTrigger>
-        <TabsTrigger value="roles">Roles</TabsTrigger>
-        <TabsTrigger value="report-status">Estados de Reporte</TabsTrigger>
-        <TabsTrigger value="settings">Configuración</TabsTrigger>
-      </TabsList>
-
-      
         <TabsContent value="users" className="space-y-4">
           <div className="border rounded-lg p-6 bg-white">
             <div className="flex justify-between items-center mb-6">
@@ -546,14 +487,6 @@ const Admin = () => {
           )}
         </TabsContent>
         
-      <TabsContent value="roles" className="space-y-4">
-        <RoleManageTable />
-      </TabsContent>
-      <TabsContent value="report-status" className="space-y-4">
-        <StatusManageTable />
-      </TabsContent>
-
-      
         <TabsContent value="settings" className="space-y-4">
           <SettingsForm 
             settings={settings}
