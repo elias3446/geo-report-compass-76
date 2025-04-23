@@ -1,3 +1,4 @@
+
 import React from 'react';
 import {
   Table,
@@ -33,7 +34,7 @@ const ReportCategoryTable: React.FC<ReportCategoryTableProps> = ({
 }) => {
   return (
     <div className="border rounded-lg">
-      <div className="overflow-auto max-h-[500px]">
+      <ScrollArea className="max-h-[500px]">
         <Table className="table-fixed w-full">
           <TableHeader className="sticky top-0 bg-background z-10">
             <TableRow>
@@ -86,9 +87,10 @@ const ReportCategoryTable: React.FC<ReportCategoryTableProps> = ({
             ))}
           </TableBody>
         </Table>
-      </div>
+      </ScrollArea>
     </div>
   );
 };
 
 export default ReportCategoryTable;
+
