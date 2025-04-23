@@ -129,13 +129,6 @@ const RoleManageTable: React.FC = () => {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="font-bold text-lg">Roles de Usuario</h3>
-        <Button onClick={() => setIsDialogOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Nuevo Rol
-        </Button>
-      </div>
       
       <ScrollArea className="h-[500px] border rounded-lg">
         <Table>
