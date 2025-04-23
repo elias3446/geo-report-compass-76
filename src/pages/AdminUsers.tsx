@@ -7,6 +7,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { createUser } from "@/services/adminService";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const AdminUsers = () => {
   const { users, setUsers } = useUsers();
@@ -27,9 +28,9 @@ const AdminUsers = () => {
         </Button>
       </CardHeader>
       <CardContent>
-        <div className="max-h-[600px] overflow-auto">
+        <ScrollArea className="max-h-[600px]">
           <UserTable filteredUsers={users} onEdit={() => {}} />
-        </div>
+        </ScrollArea>
       </CardContent>
       <UserForm open={isFormOpen} onClose={() => setIsFormOpen(false)} onSubmit={handleCreateUser} />
     </Card>

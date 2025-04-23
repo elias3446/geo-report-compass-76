@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { format } from 'date-fns';
 import { User } from '../../types/admin';
@@ -67,7 +68,7 @@ const UserTable: React.FC<UserTableProps> = ({
   }
 
   return (
-    <div className="rounded-md border max-h-[540px] overflow-auto">
+    <div className="rounded-md border">
       <Table>
         <TableHeader>
           <TableRow>
