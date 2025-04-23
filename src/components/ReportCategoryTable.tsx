@@ -1,4 +1,3 @@
-
 import React from 'react';
 import {
   Table,
@@ -10,7 +9,7 @@ import {
 } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
-import { EditIcon, TrashIcon } from "lucide-react";
+import { EditIcon, TrashIcon, Eye } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 interface Category {
@@ -34,13 +33,13 @@ const ReportCategoryTable: React.FC<ReportCategoryTableProps> = ({
 }) => {
   return (
     <div className="border rounded-lg">
-      <ScrollArea className="h-[500px]">
+      <div className="overflow-auto max-h-[500px]">
         <Table className="table-fixed w-full">
           <TableHeader className="sticky top-0 bg-background z-10">
             <TableRow>
               <TableHead className="w-[25%] pl-4">Nombre</TableHead>
               <TableHead className="w-[35%]">Descripción</TableHead>
-              <TableHead className="w-[15%] text-center">Reportes</TableHead>
+              <TableHead className="w-[15%] text-center">Reportes asignados</TableHead>
               <TableHead className="w-[15%] text-center">Estado</TableHead>
               <TableHead className="w-[10%] text-right pr-4">Acciones</TableHead>
             </TableRow>
@@ -63,6 +62,12 @@ const ReportCategoryTable: React.FC<ReportCategoryTableProps> = ({
                     <Button
                       variant="ghost"
                       size="icon"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
                       onClick={() => onEdit(category)}
                     >
                       <EditIcon className="h-4 w-4" />
@@ -81,7 +86,7 @@ const ReportCategoryTable: React.FC<ReportCategoryTableProps> = ({
             ))}
           </TableBody>
         </Table>
-      </ScrollArea>
+      </div>
     </div>
   );
 };

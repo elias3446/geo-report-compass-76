@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { format } from 'date-fns';
 import { User } from '../../types/admin';
@@ -39,7 +38,7 @@ const roleColors = {
   viewer: 'bg-gray-100 text-gray-800 border-gray-200'
 };
 
-const UserTable: React.FC<UserTableProps> = ({ 
+const UserTable: React.FC<UserTableProps> = ({
   onEdit,
   currentUser = { id: 'admin', name: 'Administrador' },
   filteredUsers
@@ -68,7 +67,7 @@ const UserTable: React.FC<UserTableProps> = ({
   }
 
   return (
-    <div className="rounded-md border">
+    <div className="rounded-md border max-h-[540px] overflow-auto">
       <Table>
         <TableHeader>
           <TableRow>
