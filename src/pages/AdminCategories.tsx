@@ -22,7 +22,7 @@ const AdminCategories = () => {
 
   return (
     <Card>
-      <CardHeader className="flex items-center justify-between">
+      <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Categorías de Reportes</CardTitle>
         <Button variant="default" onClick={() => setIsFormOpen(true)} size="sm">
           <Plus className="w-4 h-4 mr-1" />

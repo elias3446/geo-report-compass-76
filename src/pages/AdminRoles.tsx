@@ -1,5 +1,6 @@
+
 import React, { useState } from "react";
-import { Card, CardHeader, CardContent } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import RoleManageTable from "@/components/admin/RoleManageTable";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
@@ -64,8 +65,12 @@ const AdminRoles = () => {
 
   return (
     <Card>
-      <CardHeader className="flex items-center justify-between">
+      <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Gestión de Roles</CardTitle>
+        <Button variant="default" onClick={() => setIsOpen(true)} size="sm">
+          <Plus className="w-4 h-4 mr-1" />
+          Nuevo Rol
+        </Button>
       </CardHeader>
       <CardContent>
         <div className="overflow-auto max-h-[500px]">

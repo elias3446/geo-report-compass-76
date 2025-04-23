@@ -41,7 +41,7 @@ const AdminReports = () => {
 
   return (
     <Card>
-      <CardHeader className="flex items-center justify-between">
+      <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Gestión de Reportes</CardTitle>
         <Button variant="default" onClick={() => setIsOpen(true)} size="sm">
           <Plus className="w-4 h-4 mr-1" />

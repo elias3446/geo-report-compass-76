@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -44,7 +43,7 @@ const AdminStatuses = () => {
 
   return (
     <Card>
-      <CardHeader className="flex items-center justify-between">
+      <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Estados de Reporte</CardTitle>
         <Button variant="default" onClick={() => setIsOpen(true)} size="sm">
           <Plus className="w-4 h-4 mr-1" />
