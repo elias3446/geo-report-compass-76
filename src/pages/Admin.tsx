@@ -1,6 +1,6 @@
 
 import React from "react";
-import { Outlet, Routes, Route, Navigate } from "react-router-dom";
+import { Outlet, Route, Routes, Navigate } from "react-router-dom";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminUsers from "./AdminUsers";
 import AdminReports from "./AdminReports";
@@ -9,10 +9,11 @@ import AdminStatuses from "./AdminStatuses";
 import AdminCategories from "./AdminCategories";
 import AdminSettings from "./AdminSettings";
 
+// Layout específico para las páginas de administración
 const AdminLayout = () => (
-  <div className="flex min-h-screen">
+  <div className="flex min-h-screen bg-muted">
     <AdminSidebar />
-    <div className="flex-1 p-6 overflow-auto bg-muted">
+    <div className="flex-1 p-6 overflow-auto">
       <Outlet />
     </div>
   </div>
@@ -21,7 +22,8 @@ const AdminLayout = () => (
 const Admin = () => (
   <Routes>
     <Route element={<AdminLayout />}>
-      <Route index element={<Navigate to="users" />} />
+      {/* Redirigir /admin a /admin/users por defecto */}
+      <Route index element={<Navigate to="users" replace />} />
       <Route path="users" element={<AdminUsers />} />
       <Route path="reports" element={<AdminReports />} />
       <Route path="roles" element={<AdminRoles />} />
